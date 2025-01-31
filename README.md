@@ -19,7 +19,7 @@ Due to incomplete AVR linker script support in LLD, the toolchain also includes 
 A custom Clang/Clang++ wrapper is included to improve compatibility with the Arduino build system by handling specific flag adjustments. **Know more at [ClangBuiltArduino/clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper)**
 
 ## Distribution and Packaging
-The toolchain is packaged into two separate components for better modularity and efficiency:
+The toolchain is packaged into separate components for better modularity and efficiency:
 
 1. **LLVM Toolchain** (Unified Clang/LLVM binaries, statically linked, requiring no dependencies)
 2. **Sysroot** (Target-specific standard libraries and runtime files for AVR/ARM)
