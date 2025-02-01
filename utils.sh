@@ -47,19 +47,18 @@ prep_env() {
 get_tar() {
     echo "Checking for existing file: $2"
 
-    if [ -f "$2" ]; then
-        echo "Using existing file: $2"
-    else
-        echo "Downloading from $1 as $2 ..."
-        wget -O"$2" "$1"
-    fi
-
     # Get the base filename by stripping common multi-extension suffixes
     extract_dir="${2%.tar.*}" # Removes .tar.gz, .tar.xz, .tar.bz2, etc.
 
     if [ -d "$extract_dir" ]; then
         echo "Extraction directory '$extract_dir' already exists. Skipping extraction."
     else
+        if [ -f "$2" ]; then
+            echo "Using existing file: $2"
+        else
+            echo "Downloading from $1 as $2 ..."
+            wget -O"$2" "$1"
+        fi
         echo "Extracting $2 into $extract_dir ..."
         mkdir -p "$extract_dir"
         bsdtar -xf "$2" -C "$extract_dir"
