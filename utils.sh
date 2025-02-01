@@ -48,7 +48,7 @@ get_tar() {
     echo "Checking for existing file: $2"
 
     # Get the base filename by stripping common multi-extension suffixes
-    extract_dir="${2%.tar.*}" # Removes .tar.gz, .tar.xz, .tar.bz2, etc.
+    extract_dir="${2%.tar.*}"  # Removes .tar.gz, .tar.xz, .tar.bz2, etc.
 
     if [ -d "$extract_dir" ]; then
         echo "Extraction directory '$extract_dir' already exists. Skipping extraction."
@@ -60,11 +60,10 @@ get_tar() {
             wget -O"$2" "$1"
         fi
         echo "Extracting $2 into $extract_dir ..."
-        mkdir -p "$extract_dir"
-        bsdtar -xf "$2" -C "$extract_dir"
+        mkdir "$extract_dir"
+        bsdtar -xf "$2" -C "$extract_dir" --strip-components=1  # Removes the top-level directory
+        rm -f "$2"
     fi
-
-    rm -f "$2"
 }
 
 init_build_dir() {
