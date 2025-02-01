@@ -1,0 +1,75 @@
+#!/bin/bash
+# Copyright (C) 2025 ClangBuiltArduino
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+source utils.sh # Include basic common utilities
+set -euo pipefail
+
+# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
+
+COMMON_FLAGS+=(
+    "-Os"   # We dont really care about performance of this one program, Lets just save some space.
+    "-flto" # Better DCE.
+    "-fPIC" # Since its dynamically linked.
+    "-I${INSTALL_DIR}/zstd/include"
+)
+
+# Use our static zstd lib to avoid dependency on zstd.
+COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd" "-Bstatic")
+
+# Prep env
+prep_env
+
+# Get source
+cd "${SOURCE_DIR}"
+get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
+BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
+
+# Build bfd linker
+init_build_dir "${BUILD_DIR}/bfd-avr"
+export CFLAGS="${COMMON_FLAGS[*]}"
+export CXXFLAGS="${COMMON_FLAGS[*]}"
+export LDFLAGS="${COMMON_LDFLAGS[*]}"
+"${BINUTILS_SDIR}"/configure \
+    --prefix="${INSTALL_DIR}/bfd" \
+    --htmldir="${INSTALL_DIR}/deleteme" \
+    --infodir="${INSTALL_DIR}/deleteme" \
+    --mandir="${INSTALL_DIR}/deleteme" \
+    --pdfdir="${INSTALL_DIR}/deleteme" \
+    --with-bugurl=https://github.com/ClangBuiltArduino/issue-tracker/issues \
+    --disable-binutils \
+    --disable-compressed-debug-sections \
+    --disable-gas \
+    --disable-gdb \
+    --disable-gdbserver \
+    --disable-gprof \
+    --disable-multilib \
+    --disable-werror \
+    --enable-deterministic-archives \
+    --enable-gold \
+    --enable-ld=default \
+    --enable-lto \
+    --enable-plugins \
+    --enable-threads \
+    --target=avr \
+    --with-static-standard-libraries
+
+make configure-host
+make LDFLAGS="${COMMON_LDFLAGS[*]}" -j"$(nproc --all)"
+make install
+
+# Remove unwanted docs
+rm -rf "${INSTALL_DIR}/deleteme"
