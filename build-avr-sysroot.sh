@@ -72,3 +72,4 @@ make install-target-libgcc -j"$(nproc --all)"
 
 # Remove things that we dont need.
 rm -rf "${INSTALL_DIR}/avr-sysroot/share"
+rm -rf "${INSTALL_DIR}/avr-sysroot/bin"
