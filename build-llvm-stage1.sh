@@ -42,6 +42,11 @@ cmake -G "Ninja" \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_ZLIB=FORCE_ON \
     -DLLVM_ENABLE_ZSTD=FORCE_ON \
+    -DLLVM_USE_STATIC_ZSTD=ON \
+    -DZLIB_INCLUDE_DIR="${INSTALL_DIR}/zlib/include" \
+    -DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
+    -Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
+    -Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
     -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR='' \
     -DLLVM_INCLUDE_DOCS=OFF \
     -DLLVM_INCLUDE_EXAMPLES=OFF \
@@ -90,7 +95,7 @@ cmake -G "Ninja" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     "${LLVM_SDIR}/llvm"
 
-ninja -j"$(nproc -all)"
+ninja -j"$(nproc --all)"
 rm -rf "${INSTALL_DIR}/stage1"
 ninja install
 
