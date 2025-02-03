@@ -18,7 +18,7 @@ source utils.sh # Include basic common utilities
 set -euo pipefail
 
 # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
+ldd --version 2>&1 | grep -q musl && COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
 
 COMMON_FLAGS+=(
     "-Os"   # We dont really care about performance of this one program, Lets just save some space.
@@ -33,18 +33,42 @@ COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd" "-Bstatic")
 # Prep env
 prep_env
 
+# Get configuration
+TARGET=""
+BUILD_LD_SCRIPTS=0
+PACK=0
+for arg in "$@"; do
+    case "${arg}" in
+        "--target"*)
+            TARGET="${arg#*--target}"
+            TARGET="${TARGET:1}"
+            ;;
+        "--linker-scripts")
+            BUILD_LD_SCRIPTS=1
+            ;;
+        "--pack-install")
+            PACK=1
+            ;;
+    esac
+done
+
+if [[ -z $TARGET ]]; then
+    echo "Error: --target option is required." >&2
+    exit 1
+fi
+
 # Get source
 cd "${SOURCE_DIR}"
 get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
 BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 
 # Build bfd linker
-init_build_dir "${BUILD_DIR}/bfd-avr"
+init_build_dir "${BUILD_DIR}/binutils"
 export CFLAGS="${COMMON_FLAGS[*]}"
 export CXXFLAGS="${COMMON_FLAGS[*]}"
 export LDFLAGS="${COMMON_LDFLAGS[*]}"
 "${BINUTILS_SDIR}"/configure \
-    --prefix="${INSTALL_DIR}/bfd" \
+    --prefix="${INSTALL_DIR}/binutils-${TARGET}" \
     --htmldir="${INSTALL_DIR}/deleteme" \
     --infodir="${INSTALL_DIR}/deleteme" \
     --mandir="${INSTALL_DIR}/deleteme" \
@@ -52,19 +76,20 @@ export LDFLAGS="${COMMON_LDFLAGS[*]}"
     --with-bugurl=https://github.com/ClangBuiltArduino/issue-tracker/issues \
     --disable-binutils \
     --disable-compressed-debug-sections \
+    --disable-dwp \
     --disable-gas \
     --disable-gdb \
     --disable-gdbserver \
+    --disable-gold \
     --disable-gprof \
     --disable-multilib \
     --disable-werror \
     --enable-deterministic-archives \
-    --enable-gold \
     --enable-ld=default \
     --enable-lto \
     --enable-plugins \
     --enable-threads \
-    --target=avr \
+    --target="${TARGET}" \
     --with-static-standard-libraries
 
 make configure-host
@@ -73,3 +98,14 @@ make install
 
 # Remove unwanted docs
 rm -rf "${INSTALL_DIR}/deleteme"
+rm -rf "${INSTALL_DIR}/binutils-${TARGET}/share"
+if [[ $BUILD_LD_SCRIPTS -eq 1 ]]; then
+    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/bin"
+    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/lib"
+    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/${TARGET}/bin"
+    if [[ $PACK -eq 1 ]]; then
+        cp -r "${INSTALL_DIR}/binutils-${TARGET}"/* "${INSTALL_DIR}/install/"
+    fi
+else
+    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/${TARGET}/lib"
+fi
