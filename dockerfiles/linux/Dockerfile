@@ -1,0 +1,90 @@
+# Copyright (C) 2025 ClangBuiltArduino
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+##############
+# Deps build #
+##############
+FROM alpine:edge AS deps-local
+WORKDIR /
+COPY /utils.sh .
+COPY /build-deps.sh .
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
+RUN chmod +x build-deps.sh && bash build-deps.sh && ls && ls install
+RUN rm -rf /source && rm -rf /build
+
+#################
+# Stage 1 build #
+#################
+
+# If DEPS_IMAGE arg is passed like we do during CI build,
+# stage1 uses it as the base image to copy things from.
+# If noting is passed, it depends on the deps-local stage.
+ARG DEPS_IMAGE
+FROM ${DEPS_IMAGE:-alpine:edge} AS deps-remote 
+FROM deps-${BUILD_TYPE:-local} AS deps
+FROM alpine:edge AS stage1-local
+WORKDIR /
+COPY --from=deps /install ./install
+RUN ls && ls install
+COPY /utils.sh .
+COPY /build-llvm-stage1.sh .
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
+RUN chmod +x build-llvm-stage1.sh && bash build-llvm-stage1.sh && ls && ls install
+RUN rm -rf /source && rm -rf /build
+
+#################
+# Stage 2 build #
+#################
+
+# If Stage1_IMAGE arg is passed like we do during CI build,
+# stage2 uses it as the base image to copy things from.
+# If noting is passed, it depends on the stage1-local stage.
+ARG STAGE1_IMAGE
+FROM ${STAGE1_IMAGE:-alpine:edge} AS stage1-remote
+FROM stage1-${BUILD_TYPE:-local} AS stage1
+FROM alpine:edge AS stage2-local
+WORKDIR /
+COPY --from=stage1 /install ./install
+RUN ls && ls install
+COPY /utils.sh .
+COPY /build-llvm-stage2.sh .
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
+RUN chmod +x build-llvm-stage2.sh && bash build-llvm-stage2.sh
+RUN rm -rf /source && rm -rf /build
+
+###############
+# Build extra #
+###############
+
+# If Stage2_IMAGE arg is passed like we do during CI build,
+# postbuild uses it as the base image to copy things from.
+# If noting is passed, it depends on the stage2-local stage.
+ARG STAGE2_IMAGE
+FROM ${STAGE2_IMAGE:-alpine:edge} AS stage2-remote
+FROM stage2-${BUILD_TYPE:-local} AS stage2
+FROM alpine:edge AS extrabuild
+WORKDIR /
+COPY --from=stage2 /install/install ./install/install
+COPY --from=stage2 /install/stage1 ./install/stage1
+RUN ls && ls install
+COPY /utils.sh .
+COPY /build-extra.sh .
+COPY /build-push.sh .
+RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli
+RUN --mount=type=secret,id=GH_TOKEN \
+    gh auth login --with-token < /run/secrets/GH_TOKEN
+RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
+RUN bash build-extra.sh
+RUN bash build-push.sh
