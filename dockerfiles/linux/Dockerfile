@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG DEPS_IMAGE=deps-local
+ARG STAGE1_IMAGE=stage1-local
+ARG STAGE2_IMAGE=stage2-local
+
 ##############
 # Deps build #
 ##############
@@ -31,9 +35,7 @@ RUN rm -rf /source && rm -rf /build
 # If DEPS_IMAGE arg is passed like we do during CI build,
 # stage1 uses it as the base image to copy things from.
 # If noting is passed, it depends on the deps-local stage.
-ARG DEPS_IMAGE
-FROM ${DEPS_IMAGE:-alpine:edge} AS deps-remote 
-FROM deps-${BUILD_TYPE:-local} AS deps
+FROM ${DEPS_IMAGE} AS deps
 FROM alpine:edge AS stage1-local
 WORKDIR /
 COPY --from=deps /install ./install
@@ -51,9 +53,7 @@ RUN rm -rf /source && rm -rf /build
 # If Stage1_IMAGE arg is passed like we do during CI build,
 # stage2 uses it as the base image to copy things from.
 # If noting is passed, it depends on the stage1-local stage.
-ARG STAGE1_IMAGE
-FROM ${STAGE1_IMAGE:-alpine:edge} AS stage1-remote
-FROM stage1-${BUILD_TYPE:-local} AS stage1
+FROM ${STAGE1_IMAGE} AS stage1
 FROM alpine:edge AS stage2-local
 WORKDIR /
 COPY --from=stage1 /install ./install
@@ -71,9 +71,7 @@ RUN rm -rf /source && rm -rf /build
 # If Stage2_IMAGE arg is passed like we do during CI build,
 # postbuild uses it as the base image to copy things from.
 # If noting is passed, it depends on the stage2-local stage.
-ARG STAGE2_IMAGE
-FROM ${STAGE2_IMAGE:-alpine:edge} AS stage2-remote
-FROM stage2-${BUILD_TYPE:-local} AS stage2
+FROM ${STAGE2_IMAGE} AS stage2
 FROM alpine:edge AS extrabuild
 WORKDIR /
 COPY --from=stage2 /install/install ./install/install
