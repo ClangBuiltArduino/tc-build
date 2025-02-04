@@ -1,0 +1,43 @@
+name: LLVM Build Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      gitsha:
+        description: 'Git SHA to build'
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+  ORG_NAME: clangbuiltarduino
+  REPO_NAME: tc-build
+  IMAGE_NAME: llvm-linux
+
+jobs:
+  extra_postbuild:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: dakkshesh07
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build extras and post build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: extrabuild
+          file: dockerfiles/linux/Dockerfile
+          tags: ${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}:${{ github.event.inputs.gitsha }}
+          build-args: |
+            BUILD_TYPE=remote
+            STAGE2_IMAGE=${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-stage2:${{ github.event.inputs.gitsha }}
+          secrets: |
+            "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
