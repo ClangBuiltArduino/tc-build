@@ -68,7 +68,7 @@ export CFLAGS="${COMMON_FLAGS[*]}"
 export CXXFLAGS="${COMMON_FLAGS[*]}"
 export LDFLAGS="${COMMON_LDFLAGS[*]}"
 "${BINUTILS_SDIR}"/configure \
-    --prefix="${INSTALL_DIR}/binutils-${TARGET}" \
+    --prefix="${INSTALL_DIR}/bfd-${TARGET}" \
     --htmldir="${INSTALL_DIR}/deleteme" \
     --infodir="${INSTALL_DIR}/deleteme" \
     --mandir="${INSTALL_DIR}/deleteme" \
@@ -98,14 +98,14 @@ make install
 
 # Remove unwanted docs
 rm -rf "${INSTALL_DIR}/deleteme"
-rm -rf "${INSTALL_DIR}/binutils-${TARGET}/share"
+rm -rf "${INSTALL_DIR}/bfd-${TARGET}/share"
 if [[ $BUILD_LD_SCRIPTS -eq 1 ]]; then
-    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/bin"
-    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/lib"
-    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/${TARGET}/bin"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/bin"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/bin"
     if [[ $PACK -eq 1 ]]; then
-        cp -r "${INSTALL_DIR}/binutils-${TARGET}"/* "${INSTALL_DIR}/install/"
+        cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
     fi
 else
-    rm -rf "${INSTALL_DIR}/binutils-${TARGET}/${TARGET}/lib"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/lib"
 fi

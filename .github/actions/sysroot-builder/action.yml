@@ -1,0 +1,45 @@
+name: 'Build sysroot for target'
+description: 'Reusable action for building and pushing sysroot for target'
+
+inputs:
+  target:
+    description: 'target for which sysroot is to be built'
+    required: true
+  build-args:
+    description: 'Build arguments'
+    required: false
+    default: ''
+  secrets:
+    description: 'Build secrets'
+    required: false
+    default: ''
+  sha:
+    description: 'Git sha'
+    required: true
+  push:
+    description: 'Whether to push the image to registry'
+    required: false
+    default: 'false'
+  token:
+    description: 'Github token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Log in to Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: dakkshesh07
+        password: ${{ inputs.token }}
+        
+    - name: Build and push
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: dockerfiles/sysroot/${{ inputs.target }}.Dockerfile
+        push: ${{ inputs.push }}
+        tags: ghcr.io/clangbuiltarduino/sysroot-${{ inputs.target }}:${{ inputs.sha }}
+        build-args: ${{ inputs.build-args }}
+        secrets: ${{ inputs.secrets }}
