@@ -22,7 +22,13 @@ set -euo pipefail
 TDATE="$(date "+%d%m%Y")"
 HOST="$1"
 DIR_NAME="bfd-avr-${BINUTILS_VERSION}-${TDATE}"
-FILE_NAME="${DIR_NAME}-${HOST}"
+
+# Adjust FILE_NAME based on HOST
+if [ "$HOST" = "windows" ]; then
+    FILE_NAME="${DIR_NAME}-${HOST}"
+else
+    FILE_NAME="${DIR_NAME}-linux-${HOST}"
+fi
 
 # Compress and create archives
 cd "${INSTALL_DIR}"
@@ -32,8 +38,10 @@ mv "install" "${DIR_NAME}"
 tar -I "zstd -T$(nproc --all) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
 # Create gzip archive
 tar -I "gzip --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
-# Create zip archive
-zip -r9 "${FILE_NAME}.zip" "${DIR_NAME}"
+# Create zip archive (only for windows)
+if [ "$HOST" = "windows" ]; then
+    zip -r9 "${FILE_NAME}.zip" "${DIR_NAME}"
+fi
 
 git clone "https://github.com/ClangBuiltArduino/tc-build.git" "tc-build"
 cd "tc-build"
