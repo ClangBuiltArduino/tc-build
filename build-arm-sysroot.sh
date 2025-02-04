@@ -51,6 +51,7 @@ make -j"$(nproc --all)"
 make install
 
 # Build libgcc
+cd "${GCC_SDIR}" && ./contrib/download_prerequisites # Download prerequisites
 init_build_dir "${BUILD_DIR}/libgcc"
 export CFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
 export CXXFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
