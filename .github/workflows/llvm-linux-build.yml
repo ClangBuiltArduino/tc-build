@@ -1,14 +1,11 @@
 name: LLVM Build Pipeline
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   ORG_NAME: clangbuiltarduino
-  REPO_NAME: tc-build
   IMAGE_NAME: llvm-linux
 
 jobs:
@@ -19,22 +16,15 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Log in to GitHub Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: dakkshesh07
-          password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build deps stage
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/stage-builder
         with:
-          context: .
           target: deps-local
+          host: linux
           file: dockerfiles/linux/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-deps:${{ github.sha }}
+          tags: deps:${{ github.sha }}
 
   stage1:
     needs: deps
@@ -44,25 +34,18 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Log in to GitHub Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: dakkshesh07
-          password: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build stage1
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/stage-builder
         with:
-          context: .
           target: stage1-local
+          host: linux
           file: dockerfiles/linux/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-stage1:${{ github.sha }}
+          tags: stage1:${{ github.sha }}
           build-args: |
             BUILD_TYPE=remote
-            DEPS_IMAGE=${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-deps:${{ github.sha }}
+            DEPS_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-deps:${{ github.sha }}
 
   stage2:
     needs: stage1
@@ -72,25 +55,18 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Log in to GitHub Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: dakkshesh07
-          password: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build stage2
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/stage-builder
         with:
-          context: .
           target: stage2-local
+          host: linux
           file: dockerfiles/linux/Dockerfile
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-stage2:${{ github.sha }}
+          tags: stage2:${{ github.sha }}
           build-args: |
             BUILD_TYPE=remote
-            STAGE1_IMAGE=${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-stage1:${{ github.sha }}
+            STAGE1_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage1:${{ github.sha }}
 
   extra_postbuild:
     needs: stage2
@@ -100,23 +76,17 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Log in to GitHub Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: dakkshesh07
-          password: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Build extras and post build
-        uses: docker/build-push-action@v5
+        uses: ./.github/actions/stage-builder
         with:
-          context: .
           target: extrabuild
+          host: linux
           file: dockerfiles/linux/Dockerfile
-          tags: ${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          push: false
+          tags: extrabuild:${{ github.sha }}
           build-args: |
             BUILD_TYPE=remote
-            STAGE2_IMAGE=${{ env.REGISTRY }}/${{ env.ORG_NAME }}/${{ env.IMAGE_NAME }}-stage2:${{ github.sha }}
+            STAGE2_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage2:${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
