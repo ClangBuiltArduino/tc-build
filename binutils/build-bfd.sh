@@ -104,9 +104,11 @@ if [[ $BUILD_LD_SCRIPTS -eq 1 ]]; then
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/bin"
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib"
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/bin"
-    if [[ $PACK -eq 1 ]]; then
-        cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
-    fi
 else
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/lib"
+fi
+
+if [[ $PACK -eq 1 ]]; then
+    mkdir -p "${INSTALL_DIR}/install/"
+    cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
 fi
