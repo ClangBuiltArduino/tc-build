@@ -85,4 +85,4 @@ RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
 RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
 RUN bash build-extra.sh
-RUN bash build-push.sh
+RUN bash build-push.sh "amd64" "linux"
