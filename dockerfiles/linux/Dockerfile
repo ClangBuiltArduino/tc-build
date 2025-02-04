@@ -80,7 +80,7 @@ RUN ls && ls install
 COPY /utils.sh .
 COPY /build-extra.sh .
 COPY /build-push.sh .
-RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli make
+RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli make file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
 RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
