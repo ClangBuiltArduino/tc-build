@@ -26,6 +26,9 @@ inputs:
     description: 'Whether to push the image to registry'
     required: false
     default: 'false'
+  token:
+    description: 'Github token'
+    required: true
 
 runs:
   using: "composite"
@@ -35,14 +38,14 @@ runs:
       with:
         registry: ghcr.io
         username: dakkshesh07
-        password: ${{ secrets.GITHUB_TOKEN }}
+        password: ${{ inputs.token }}
         
     - name: Build and push
       uses: docker/build-push-action@v6
       with:
         context: .
         target: ${{ inputs.target }}
-        file: ${{ inputs.dockerfile }}
+        file: ${{ inputs.file }}
         push: ${{ inputs.push }}
         tags: ghcr.io/clangbuiltarduino/llvm-${{ inputs.host }}-${{ inputs.tags }}
         build-args: ${{ inputs.build-args }}

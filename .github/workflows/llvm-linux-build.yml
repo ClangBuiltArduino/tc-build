@@ -25,6 +25,7 @@ jobs:
           file: dockerfiles/linux/Dockerfile
           push: true
           tags: deps:${{ github.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1:
     needs: deps
@@ -46,6 +47,7 @@ jobs:
           build-args: |
             BUILD_TYPE=remote
             DEPS_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-deps:${{ github.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   stage2:
     needs: stage1
@@ -67,6 +69,7 @@ jobs:
           build-args: |
             BUILD_TYPE=remote
             STAGE1_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage1:${{ github.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   extra_postbuild:
     needs: stage2
@@ -90,3 +93,4 @@ jobs:
             STAGE2_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage2:${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
