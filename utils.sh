@@ -23,7 +23,7 @@ export AVR_LIBC_VER="2.2.1-clang"
 export BINUTILS_VERSION="2.43.1"
 export GCC_VER="14.2.0"
 export NEWLIB_VER="4.5.0.20241231"
-export LLVM_VERSION="19.1.7"
+export LLVM_VERSION="20.1.0-rc1"
 
 # Configuration
 SOURCE_DIR="${CURR_DIR}/source"
