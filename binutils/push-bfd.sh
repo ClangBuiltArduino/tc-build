@@ -35,9 +35,9 @@ cd "${INSTALL_DIR}"
 mv "install" "${DIR_NAME}"
 
 # Create zstd archive
-tar -I "zstd -T$(nproc --all) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
+tar -I "zstd -k -T$(nproc --all) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
 # Create gzip archive
-tar -I "gzip --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
+tar -I "gzip -k --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
 # Create zip archive (only for windows)
 if [ "$HOST" = "windows" ]; then
     zip -r9 "${FILE_NAME}.zip" "${DIR_NAME}"
@@ -45,6 +45,8 @@ fi
 
 git clone "https://github.com/ClangBuiltArduino/tc-build.git" "tc-build"
 cd "tc-build"
+
+ls "${INSTALL_DIR}"
 
 for archive in "${INSTALL_DIR}/${FILE_NAME}".*; do
     if gh release view "bfd-${BINUTILS_VERSION}-${TDATE}"; then
