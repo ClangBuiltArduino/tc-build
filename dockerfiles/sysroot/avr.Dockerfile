@@ -15,10 +15,10 @@
 
 FROM alpine:edge AS deps-local
 WORKDIR /
-COPY /utils.sh .
-COPY /build-bfd.sh .
-COPY /build-avr-sysroot.sh .
-COPY /sysroot-push.sh .
+COPY /common/utils.sh .
+COPY /binutils/build-bfd.sh .
+COPY /sysroot/build-avr-sysroot.sh .
+COPY /sysroot/sysroot-push.sh .
 RUN apk add bash coreutils gzip tar xz patchelf git go github-cli make file gcc-avr libarchive-tools build-base gettext libtool autoconf automake bison texinfo zlib-dev zstd-dev python3 zip
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN

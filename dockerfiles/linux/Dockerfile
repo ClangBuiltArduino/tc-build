@@ -22,8 +22,8 @@ ARG STAGE2_IMAGE=stage2-local
 ##############
 FROM alpine:edge AS deps-local
 WORKDIR /
-COPY /utils.sh .
-COPY /build-deps.sh .
+COPY /common/utils.sh .
+COPY /common/build-deps.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
 RUN chmod +x build-deps.sh && bash build-deps.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
@@ -40,8 +40,8 @@ FROM alpine:edge AS stage1-local
 WORKDIR /
 COPY --from=deps /install ./install
 RUN ls && ls install
-COPY /utils.sh .
-COPY /build-llvm-stage1.sh .
+COPY /common/utils.sh .
+COPY /llvm/build-llvm-stage1.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
 RUN chmod +x build-llvm-stage1.sh && bash build-llvm-stage1.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
@@ -58,8 +58,8 @@ FROM alpine:edge AS stage2-local
 WORKDIR /
 COPY --from=stage1 /install ./install
 RUN ls && ls install
-COPY /utils.sh .
-COPY /build-llvm-stage2.sh .
+COPY /common/utils.sh .
+COPY /llvm/build-llvm-stage2.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
 RUN chmod +x build-llvm-stage2.sh && bash build-llvm-stage2.sh
 RUN rm -rf /source && rm -rf /build
@@ -77,9 +77,9 @@ WORKDIR /
 COPY --from=stage2 /install/install ./install/install
 COPY --from=stage2 /install/stage1 ./install/stage1
 RUN ls && ls install
-COPY /utils.sh .
-COPY /build-extra.sh .
-COPY /build-push.sh .
+COPY /common/utils.sh .
+COPY /llvm/build-extra.sh .
+COPY /llvm/build-push.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli make file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN

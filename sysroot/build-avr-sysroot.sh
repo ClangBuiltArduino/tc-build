@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-source utils.sh # Include basic common utilities
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+source "${SCRIPT_DIR}"/../common/utils.sh &> /dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
 # Prepare env
@@ -22,30 +23,25 @@ prep_env
 
 # Get sources
 cd "${SOURCE_DIR}"
-get_tar "ftp://sourceware.org/pub/newlib/newlib-${NEWLIB_VER}.tar.gz" "newlib-${NEWLIB_VER}.tar.gz"
-NEWLIB_SDIR="${SOURCE_DIR}/newlib-${NEWLIB_VER}"
+get_tar "https://github.com/ClangBuiltArduino/avr-libc/archive/refs/heads/${AVR_LIBC_VER}.tar.gz" "avr-libc-${AVR_LIBC_VER}.tar.gz"
+AVR_LIBC_SDIR="${SOURCE_DIR}/avr-libc-${AVR_LIBC_VER}"
 get_tar "https://ftp.gnu.org/gnu/gcc/gcc-14.2.0/gcc-${GCC_VER}.tar.xz" "gcc-${GCC_VER}.tar.xz"
 GCC_SDIR="${SOURCE_DIR}/gcc-${GCC_VER}"
 
-# Build newlib-libc
+# Build avr-libc
+cd "${AVR_LIBC_SDIR}" && ./bootstrap
 init_build_dir "${BUILD_DIR}/libc"
 export CFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
 export CXXFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
-"${NEWLIB_SDIR}"/configure \
-    --target=arm-none-eabi \
-    --prefix="${INSTALL_DIR}/arm-sysroot" \
+"${AVR_LIBC_SDIR}"/configure \
+    --host=avr \
+    --prefix="${INSTALL_DIR}/avr-sysroot" \
     --disable-doc \
     --disable-html-doc \
     --disable-man-doc \
     --disable-pdf-doc \
     --disable-versioned-doc \
-    --enable-newlib-io-long-long \
-    --enable-silent-rules \
-    --disable-newlib-supplied-syscalls \
-    --disable-nls \
-    --enable-newlib-io-c99-formats \
-    --enable-newlib-register-fini \
-    --enable-newlib-retargetable-locking
+    --enable-silent-rules
 
 make -j"$(nproc --all)"
 make install
@@ -56,8 +52,8 @@ init_build_dir "${BUILD_DIR}/libgcc"
 export CFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
 export CXXFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
 "${GCC_SDIR}"/configure \
-    --target=arm-none-eabi \
-    --prefix="${INSTALL_DIR}/arm-sysroot" \
+    --target=avr \
+    --prefix="${INSTALL_DIR}/avr-sysroot" \
     --disable-__cxa_atexit \
     --disable-doc \
     --disable-install-libiberty \
@@ -77,4 +73,5 @@ make all-target-libgcc -j"$(nproc --all)"
 make install-target-libgcc -j"$(nproc --all)"
 
 # Remove things that we dont need.
-rm -rf "${INSTALL_DIR}/arm-sysroot/share"
+rm -rf "${INSTALL_DIR}/avr-sysroot/share"
+rm -rf "${INSTALL_DIR}/avr-sysroot/bin"
