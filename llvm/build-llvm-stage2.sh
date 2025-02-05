@@ -47,8 +47,6 @@ prep_env
 cd "${SOURCE_DIR}"
 get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
 LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
-get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
-BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 
 # Use tools exclusively from bootstrap build if possible.
 export PATH="$INSTALL_DIR/stage1/bin:$PATH"
@@ -62,7 +60,6 @@ cmake -G "Ninja" \
     -DCLANG_VENDOR="ClangBuiltArduino" \
     -DLLD_VENDOR="ClangBuiltArduino" \
     -DBUG_REPORT_URL="https://github.com/ClangBuiltArduino/issue-tracker/issues" \
-    -DLLVM_BINUTILS_INCDIR="${BINUTILS_SDIR}/include" \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="AVR;ARM" \
     -DLLVM_ENABLE_PIC=ON \
