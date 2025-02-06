@@ -21,24 +21,22 @@ set -euo pipefail
 # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
 COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
 
-# Set flags for static linking and using LLVM stdlibs.
-COMMON_FLAGS+=("-static")
+
+# Set path for using libs from stage 1
 COMMON_LDFLAGS+=(
-    "-static"
+    "-L${INSTALL_DIR}/stage1/lib"
+    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
+)
+
+# Set flags for using LLVM stdlibs.
+COMMON_LDFLAGS+=(
+    "-Wl,-Bstatic"
+    "-stdlib=libc++"
     "--unwindlib=libunwind"
     "-lc++"
     "-lc++abi"
-    "-stdlib=libc++"
-    "-Wl,-Bstatic"
 )
 
-# Fix libc++ files not being linked automatically.
-COMMON_LDFLAGS+=(
-    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
-    "${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/libc++abi.a"
-    "${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/libc++.a"
-
-)
 
 # Prepare environment
 prep_env
@@ -47,28 +45,26 @@ prep_env
 cd "${SOURCE_DIR}"
 get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
 LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
+get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
+BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 
 # Use tools exclusively from bootstrap build if possible.
 export PATH="$INSTALL_DIR/stage1/bin:$PATH"
 export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/x86_64-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
 
 # Build stage2
-init_build_dir "${BUILD_DIR}/stage2"
+init_build_dir "${BUILD_DIR}/llvmgold"
 cmake -G "Ninja" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/install" \
-    -DCLANG_VENDOR="ClangBuiltArduino" \
-    -DLLD_VENDOR="ClangBuiltArduino" \
-    -DBUG_REPORT_URL="https://github.com/ClangBuiltArduino/issue-tracker/issues" \
-    -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="AVR;ARM" \
-    -DLLVM_ENABLE_PIC=ON \
-    -DLIBCLANG_BUILD_STATIC=ON \
+    -DLLVM_ENABLE_PROJECTS="llvm" \
+    -DLLVM_DISTRIBUTION_COMPONENTS="LLVMgold" \
+    -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/install" \
+    -DLLVM_BINUTILS_INCDIR="${BINUTILS_SDIR}/include" \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
-    -DLLVM_BUILD_STATIC=ON \
-    -DLLVM_CCACHE_BUILD=ON \
-    -DLLVM_DISTRIBUTION_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer;LTO" \
+    -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_BUILD_UTILS=OFF \
+    -DLLVM_CCACHE_BUILD=ON \
     -DLLVM_ENABLE_BACKTRACES=OFF \
     -DLLVM_ENABLE_BINDINGS=OFF \
     -DLLVM_ENABLE_LIBCXX=ON \
@@ -76,7 +72,9 @@ cmake -G "Ninja" \
     -DLLVM_ENABLE_LLD=ON \
     -DLLVM_ENABLE_LTO=THIN \
     -DLLVM_ENABLE_OCAMLDOC=OFF \
-    -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR='' \
+    -DLLVM_ENABLE_PIC=ON \
+    -DLLVM_ENABLE_ZLIB=ON \
+    -DLLVM_ENABLE_ZSTD=ON \
     -DLLVM_INCLUDE_BENCHMARKS=OFF \
     -DLLVM_INCLUDE_DOCS=OFF \
     -DLLVM_INCLUDE_EXAMPLES=OFF \
@@ -108,7 +106,6 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_LLVM_DIS_BUILD=OFF \
     -DLLVM_TOOL_LLVM_DIS_FUZZER_BUILD=OFF \
     -DLLVM_TOOL_LLVM_DLANG_DEMANGLE_FUZZER_BUILD=OFF \
-    -DLLVM_TOOL_LLVM_DRIVER_BUILD=ON \
     -DLLVM_TOOL_LLVM_DWARFDUMP_BUILD=OFF \
     -DLLVM_TOOL_LLVM_DWARFUTIL_BUILD=OFF \
     -DLLVM_TOOL_LLVM_DWP_BUILD=OFF \
@@ -123,8 +120,8 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_LLVM_LIBTOOL_DARWIN_BUILD=OFF \
     -DLLVM_TOOL_LLVM_LINK_BUILD=OFF \
     -DLLVM_TOOL_LLVM_LIPO_BUILD=OFF \
-    -DLLVM_TOOL_LLVM_LTO2_BUILD=OFF \
     -DLLVM_TOOL_LLVM_LTO_BUILD=OFF \
+    -DLLVM_TOOL_LLVM_LTO2_BUILD=OFF \
     -DLLVM_TOOL_LLVM_MC_ASSEMBLE_FUZZER_BUILD=OFF \
     -DLLVM_TOOL_LLVM_MC_BUILD=OFF \
     -DLLVM_TOOL_LLVM_MC_DISASSEMBLE_FUZZER_BUILD=OFF \
@@ -154,6 +151,7 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_LLVM_XRAY_BUILD=OFF \
     -DLLVM_TOOL_LLVM_YAML_NUMERIC_PARSER_FUZZER_BUILD=OFF \
     -DLLVM_TOOL_LLVM_YAML_PARSER_FUZZER_BUILD=OFF \
+    -DLLVM_TOOL_LTO_BUILD=OFF \
     -DLLVM_TOOL_OBJ2YAML_BUILD=OFF \
     -DLLVM_TOOL_OPT_BUILD=OFF \
     -DLLVM_TOOL_OPT_VIEWER_BUILD=OFF \
@@ -166,41 +164,6 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_VFABI_DEMANGLE_FUZZER_BUILD=OFF \
     -DLLVM_TOOL_XCODE_TOOLCHAIN_BUILD=OFF \
     -DLLVM_TOOL_YAML2OBJ_BUILD=OFF \
-    -DCLANG_BUILD_TOOLS=OFF \
-    -DCLANG_DEFAULT_CXX_STDLIB="libc++" \
-    -DCLANG_DEFAULT_OBJCOPY="llvm-objcopy" \
-    -DCLANG_ENABLE_ARCMT=OFF \
-    -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
-    -DCLANG_INCLUDE_DOCS=OFF \
-    -DCLANG_TOOL_AMDGPU_ARCH_BUILD=OFF \
-    -DCLANG_TOOL_APINOTES_TEST_BUILD=OFF \
-    -DCLANG_TOOL_ARCMT_TEST_BUILD=OFF \
-    -DCLANG_TOOL_C_ARCMT_TEST_BUILD=OFF \
-    -DCLANG_TOOL_C_INDEX_TEST_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_CHECK_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_DIFF_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_EXTDEF_MAPPING_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_FORMAT_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_FORMAT_VS_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_FUZZER_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_IMPORT_TEST_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_INSTALLAPI_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_LINKER_WRAPPER_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_NVLINK_WRAPPER_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_OFFLOAD_BUNDLER_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_OFFLOAD_PACKAGER_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_REFACTOR_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_RENAME_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_REPL_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_SCAN_DEPS_BUILD=OFF \
-    -DCLANG_TOOL_CLANG_SHLIB_BUILD=OFF \
-    -DCLANG_TOOL_DIAGTOOL_BUILD=OFF \
-    -DCLANG_TOOL_NVPTX_ARCH_BUILD=OFF \
-    -DCLANG_TOOL_SCAN_BUILD_BUILD=OFF \
-    -DCLANG_TOOL_SCAN_BUILD_PY_BUILD=OFF \
-    -DCLANG_TOOL_SCAN_VIEW_BUILD=OFF \
-    -DLLVM_ENABLE_ZLIB=ON \
-    -DLLVM_ENABLE_ZSTD=ON \
     -DLLVM_USE_STATIC_ZSTD=ON \
     -DZLIB_INCLUDE_DIR="${INSTALL_DIR}/zlib/include" \
     -DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
@@ -218,4 +181,4 @@ cmake -G "Ninja" \
 ninja -j"$(nproc --all)"
 ninja install-distribution
 
-echo "LLVM stage2 build completed successfully!"
+echo "LLVMgold build completed successfully!"
