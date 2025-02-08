@@ -18,27 +18,29 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &> /dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
-
-# Set flags for static linking and using LLVM stdlibs.
+# Set flags for static linking
 COMMON_FLAGS+=("-static")
 COMMON_LDFLAGS+=(
     "-static"
+)
+
+# Set flags to use libs from stage1.
+COMMON_LDFLAGS+=(
+    "-L${INSTALL_DIR}/stage1/lib"
+    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
+)
+
+# Set flags for using LLVM stdlibs.
+COMMON_LDFLAGS+=(
+    "-Wl,-Bstatic"
+    "-stdlib=libc++"
     "--unwindlib=libunwind"
     "-lc++"
     "-lc++abi"
-    "-stdlib=libc++"
-    "-Wl,-Bstatic"
 )
 
-# Fix libc++ files not being linked automatically.
-COMMON_LDFLAGS+=(
-    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
-    "${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/libc++abi.a"
-    "${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/libc++.a"
-
-)
+# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
 
 # Prepare environment
 prep_env
