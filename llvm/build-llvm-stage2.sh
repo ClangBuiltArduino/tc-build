@@ -69,7 +69,7 @@ cmake -G "Ninja" \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
     -DLLVM_BUILD_STATIC=ON \
     -DLLVM_CCACHE_BUILD=ON \
-    -DLLVM_DISTRIBUTION_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer;LTO" \
+    -DLLVM_DISTRIBUTION_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer" \
     -DLLVM_BUILD_UTILS=OFF \
     -DLLVM_ENABLE_BACKTRACES=OFF \
     -DLLVM_ENABLE_BINDINGS=OFF \
