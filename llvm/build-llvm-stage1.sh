@@ -29,6 +29,13 @@ cd "${SOURCE_DIR}"
 get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
 LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
 
+# Automatically detect musl or glibc host
+if ldd --version 2>&1 | grep -qi musl; then
+    MUSL_HOST="YES"
+else
+    MUSL_HOST="NO"
+fi
+
 # Build stage1
 init_build_dir "${BUILD_DIR}/stage1"
 cmake -G "Ninja" \
@@ -73,7 +80,7 @@ cmake -G "Ninja" \
     -DLIBCXX_HAS_ATOMIC_LIB=OFF \
     -DLIBCXX_HAS_GCC_LIB=OFF \
     -DLIBCXX_HAS_GCC_S_LIB=OFF \
-    -DLIBCXX_HAS_MUSL_LIBC=ON \
+    -DLIBCXX_HAS_MUSL_LIBC="${MUSL_HOST}" \
     -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
     -DLIBCXX_INCLUDE_DOCS=OFF \
     -DLIBCXX_INCLUDE_TESTS=OFF \
