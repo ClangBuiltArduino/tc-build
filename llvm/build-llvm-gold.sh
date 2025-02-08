@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
-source "${SCRIPT_DIR}"/../common/utils.sh &> /dev/null || source utils.sh # Include basic common utilities
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
 # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
 COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
-
 
 # Set path for using libs from stage 1
 COMMON_LDFLAGS+=(
@@ -36,7 +35,6 @@ COMMON_LDFLAGS+=(
     "-lc++"
     "-lc++abi"
 )
-
 
 # Prepare environment
 prep_env
