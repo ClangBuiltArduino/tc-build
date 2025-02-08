@@ -100,4 +100,10 @@ ninja -j"$(nproc --all)"
 rm -rf "${INSTALL_DIR}/stage1"
 ninja install
 
+# Create symlinks for libc++ and friends
+cd "$INSTALL_DIR/stage1/lib"
+for library in libc++abi.so.1 libc++.a libc++abi.a libc++.so.1 libunwind.so.1 libunwind.a; \
+    do ln -sv "${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/${library}" .; \
+done
+
 echo "LLVM stage1 build completed successfully!"
