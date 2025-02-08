@@ -18,9 +18,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
-
 # Prepare environment
 prep_env
 
@@ -28,6 +25,16 @@ prep_env
 cd "${SOURCE_DIR}"
 get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
 LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
+
+# Detect if host has musl or glibc for configuring
+if ldd --version 2>&1 | grep -qi musl; then
+    HAS_MUSL_LIBC="ON"
+
+    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
+else
+    HAS_MUSL_LIBC="OFF"
+fi
 
 # Build stage1
 init_build_dir "${BUILD_DIR}/stage1"
@@ -73,7 +80,7 @@ cmake -G "Ninja" \
     -DLIBCXX_HAS_ATOMIC_LIB=OFF \
     -DLIBCXX_HAS_GCC_LIB=OFF \
     -DLIBCXX_HAS_GCC_S_LIB=OFF \
-    -DLIBCXX_HAS_MUSL_LIBC=ON \
+    -DLIBCXX_HAS_MUSL_LIBC="${HAS_MUSL_LIBC}" \
     -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
     -DLIBCXX_INCLUDE_DOCS=OFF \
     -DLIBCXX_INCLUDE_TESTS=OFF \

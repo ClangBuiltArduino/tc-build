@@ -39,8 +39,11 @@ COMMON_LDFLAGS+=(
     "-lc++abi"
 )
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
+# Detect if host has musl or glibc for configuring
+if ldd --version 2>&1 | grep -qi musl; then
+    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
+fi
 
 # Prepare environment
 prep_env

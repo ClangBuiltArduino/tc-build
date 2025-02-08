@@ -18,9 +18,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
-
 # Set path for using libs from stage 1
 COMMON_LDFLAGS+=(
     "-L${INSTALL_DIR}/stage1/lib"
@@ -35,6 +32,12 @@ COMMON_LDFLAGS+=(
     "-lc++"
     "-lc++abi"
 )
+
+# Detect if host has musl or glibc for configuring
+if ldd --version 2>&1 | grep -qi musl; then
+    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
+fi
 
 # Prepare environment
 prep_env

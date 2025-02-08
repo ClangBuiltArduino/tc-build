@@ -18,9 +18,6 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-ldd --version 2>&1 | grep -q musl && COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
-
 COMMON_FLAGS+=(
     "-Os"   # We dont really care about performance of this one program, Lets just save some space.
     "-flto" # Better DCE.
@@ -29,7 +26,10 @@ COMMON_FLAGS+=(
 )
 
 # Use our static zstd lib to avoid dependency on zstd.
-COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd" "-Bstatic")
+COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
+
+# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+ldd --version 2>&1 | grep -q musl && COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
 
 # Prep env
 prep_env
