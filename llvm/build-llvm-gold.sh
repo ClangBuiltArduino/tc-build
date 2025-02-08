@@ -170,7 +170,7 @@ cmake -G "Ninja" \
     -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]} -stdlib=libc++" \
-    -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
+    -DCMAKE_EXE_LINKER_FLAGS="-static ${COMMON_LDFLAGS[*]}" \
     -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     "${LLVM_SDIR}/llvm"
