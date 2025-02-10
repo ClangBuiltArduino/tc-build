@@ -36,12 +36,7 @@ make install PREFIX="${INSTALL_DIR}/install"
 cd "${CURR_DIR}"
 
 # Strip remaining products
-echo "Stripping remaining products..."
-for f in $(find "${WORK_DIR}" -type f -exec file {} \; | grep 'not stripped' | awk '{print $1}'); do
-    f="${f::-1}"
-    echo "Stripping: ${f}"
-    "${LLVM_BIN_DIR}"/llvm-strip "${f}"
-done
+strip_bins "${WORK_DIR}" "${LLVM_BIN_DIR}/llvm-strip"
 
 # Set executable rpaths so setting LD_LIBRARY_PATH isn't necessary
 echo "Setting library load paths for portability..."

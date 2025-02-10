@@ -69,3 +69,11 @@ get_tar() {
 init_build_dir() {
     rm -rf "$1" && mkdir "$1" && cd "$1"
 }
+
+strip_bins() {
+    for f in $(find "$1" -type f -exec file {} \; | grep 'not stripped' | awk '{print $1}'); do
+        f="${f::-1}"
+        echo "Stripping: ${f}"
+        "$2" "${f}"
+    done
+}

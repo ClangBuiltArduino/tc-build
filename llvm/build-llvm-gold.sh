@@ -182,4 +182,7 @@ cmake -G "Ninja" \
 ninja -j"$(nproc --all)"
 ninja install-distribution
 
+# Strip remaining products
+strip_bins "${INSTALL_DIR}/install" "${INSTALL_DIR}/stage1/bin/llvm-strip"
+
 echo "LLVMgold build completed successfully!"

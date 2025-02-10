@@ -108,6 +108,8 @@ else
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/lib"
 fi
 
+strip_bins "${INSTALL_DIR}/bfd-${TARGET}" "strip"
+
 if [[ $PACK -eq 1 ]]; then
     mkdir -p "${INSTALL_DIR}/install/"
     cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
