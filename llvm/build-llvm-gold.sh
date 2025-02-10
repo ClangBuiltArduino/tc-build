@@ -26,6 +26,7 @@ COMMON_LDFLAGS+=(
 
 # Set flags for using LLVM stdlibs.
 COMMON_LDFLAGS+=(
+    "-Wl,--as-needed"
     "-Wl,-Bstatic"
     "-stdlib=libc++"
     "--unwindlib=libunwind"
