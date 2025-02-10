@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  musl:
+  main:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -16,42 +16,16 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: dakkshesh07
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Build deps stage
+      - name: Build bfd linker for avr
         uses: docker/build-push-action@v6
         with:
           context: .
-          target: musl
+          target: packing
           file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
           push: false
-          tags: ghcr.io/clangbuiltarduino/avr-bfd-linux-musl:${{ github.sha }}
-          secrets: |
-            "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
-
-  glibc:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Log in to GitHub Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: dakkshesh07
-          password: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Build stage1
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: glibc
-          file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
-          push: false
-          tags: ghcr.io/clangbuiltarduino/avr-bfd-linux-glibc:${{ github.sha }}
+          tags: ghcr.io/clangbuiltarduino/avr-bfd-amd64-linux:${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"

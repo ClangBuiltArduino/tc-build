@@ -25,7 +25,7 @@ WORKDIR /
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
-RUN chmod +x build-deps.sh && bash build-deps.sh && ls && ls install
+RUN bash build-deps.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 #################
@@ -43,7 +43,7 @@ RUN ls && ls install
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
-RUN chmod +x build-llvm-stage1.sh && bash build-llvm-stage1.sh && ls && ls install
+RUN bash build-llvm-stage1.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 #################
@@ -61,7 +61,7 @@ RUN ls && ls install
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
-RUN chmod +x build-llvm-stage2.sh && bash build-llvm-stage2.sh
+RUN bash build-llvm-stage2.sh
 RUN rm -rf /source && rm -rf /build
 
 ###############
@@ -78,11 +78,10 @@ COPY --from=stage2 /install/install ./install/install
 COPY --from=stage2 /install/stage1 ./install/stage1
 RUN ls && ls install
 COPY /common/utils.sh .
+COPY /common/push-build.sh .
 COPY /llvm/build-extra.sh .
-COPY /llvm/build-push.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli make file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
 RUN bash build-extra.sh
-RUN bash build-push.sh "amd64" "linux"
+RUN bash push-build.sh --gz-tar --zstd-tar --llvm-tc --pkg-arch="amd64" --pkg-os="linux"

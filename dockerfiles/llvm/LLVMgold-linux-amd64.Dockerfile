@@ -32,7 +32,7 @@ COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 RUN apt-get update -y
 RUN apt-get install clang llvm lld binutils cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 -y
-RUN chmod +x build-deps.sh && bash build-deps.sh
+RUN bash build-deps.sh
 
 # MUSL build
 FROM alpine:edge AS deps-musl-local
@@ -40,7 +40,7 @@ WORKDIR /
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
-RUN chmod +x build-deps.sh && bash build-deps.sh && ls && ls install
+RUN bash build-deps.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 #################
@@ -59,7 +59,7 @@ COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
 RUN apt-get update -y
 RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic -y
-RUN chmod +x build-llvm-stage1.sh && bash build-llvm-stage1.sh && ls && ls install
+RUN bash build-llvm-stage1.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 # MUSL build
@@ -71,7 +71,7 @@ RUN ls && ls install
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
-RUN chmod +x build-llvm-stage1.sh && bash build-llvm-stage1.sh && ls && ls install
+RUN bash build-llvm-stage1.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 #####################
@@ -90,7 +90,7 @@ COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
 RUN apt-get update -y
 RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic -y
-RUN chmod +x build-llvm-gold.sh && bash build-llvm-gold.sh && ls && ls install
+RUN bash build-llvm-gold.sh && ls && ls install
 
 # MUSL build
 FROM ${STAGE1_IMAGE_MUSL} AS stage1-musl
@@ -101,11 +101,11 @@ RUN ls && ls install
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
-RUN chmod +x build-llvm-gold.sh && bash build-llvm-gold.sh
+RUN bash build-llvm-gold.sh
 
-########################
-# Packaing LLVMgold.so #
-########################
+#########################
+# Packaging LLVMgold.so #
+#########################
 
 # If FINAL_IMAGE_{VARIANT} arg is passed like we do during CI build,
 # This stage uses it as the base image to copy things from.
@@ -118,9 +118,8 @@ COPY --from=final-glibc /install/install ./install/install/glibc
 COPY --from=final-musl /install/install ./install/install/musl
 RUN ls && ls install
 COPY /common/utils.sh .
-COPY /llvm/push-llvm-gold.sh .
+COPY /common/push-build.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git github-cli file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
-RUN chmod +x push-llvm-gold.sh && bash push-llvm-gold.sh "amd64" "linux"
+RUN bash push-build.sh --gz-tar --zstd-tar --llvm-gold --pkg-arch="amd64" --pkg-os="linux"

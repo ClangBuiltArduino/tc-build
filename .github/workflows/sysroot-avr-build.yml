@@ -3,13 +3,8 @@ name: AVR sysroot Build Pipeline
 on:
   workflow_dispatch:
 
-env:
-  REGISTRY: ghcr.io
-  ORG_NAME: clangbuiltarduino
-  IMAGE_NAME: sysroot-avr
-
 jobs:
-  build-avr-sysroot:
+  main:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,7 +16,7 @@ jobs:
         uses: ./.github/actions/sysroot-builder
         with:
           target: avr
-          push: true
+          push: false
           sha: ${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"

@@ -8,6 +8,9 @@ inputs:
   file:
     description: 'Path to Dockerfile'
     required: true
+  project:
+    description: 'Build host'
+    required: true
   host:
     description: 'Build host'
     required: true
@@ -47,6 +50,6 @@ runs:
         target: ${{ inputs.target }}
         file: ${{ inputs.file }}
         push: ${{ inputs.push }}
-        tags: ghcr.io/clangbuiltarduino/llvm-${{ inputs.host }}-${{ inputs.tags }}
+        tags: ghcr.io/clangbuiltarduino/${{ inputs.project }}-${{ inputs.host }}-${{ inputs.tags }}
         build-args: ${{ inputs.build-args }}
         secrets: ${{ inputs.secrets }}

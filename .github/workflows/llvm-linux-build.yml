@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
-  ORG_NAME: clangbuiltarduino
-  IMAGE_NAME: llvm-linux
+  PROJECT: llvm
+  PLATFORM: amd64-linux
 
 jobs:
   deps:
@@ -21,7 +20,8 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: deps-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/linux-amd64.Dockerfile
           push: true
           tags: deps:${{ github.sha }}
@@ -40,13 +40,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: stage1-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/linux-amd64.Dockerfile
           push: true
           tags: stage1:${{ github.sha }}
           build-args: |
-            BUILD_TYPE=remote
-            DEPS_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-deps:${{ github.sha }}
+            DEPS_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage2:
@@ -62,13 +62,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: stage2-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/linux-amd64.Dockerfile
           push: true
           tags: stage2:${{ github.sha }}
           build-args: |
-            BUILD_TYPE=remote
-            STAGE1_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage1:${{ github.sha }}
+            STAGE1_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   extra_postbuild:
@@ -84,13 +84,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: extrabuild
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/linux-amd64.Dockerfile
           push: false
           tags: extrabuild:${{ github.sha }}
           build-args: |
-            BUILD_TYPE=remote
-            STAGE2_IMAGE=ghcr.io/clangbuiltarduino/llvm-linux-stage2:${{ github.sha }}
+            STAGE2_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage2:${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
           token: ${{ secrets.GITHUB_TOKEN }}

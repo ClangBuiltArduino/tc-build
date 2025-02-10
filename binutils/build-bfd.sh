@@ -94,8 +94,8 @@ export LDFLAGS="${COMMON_LDFLAGS[*]}"
     --with-static-standard-libraries
 
 make configure-host
-make LDFLAGS="${COMMON_LDFLAGS[*]}" -j"$(nproc --all)"
-make install
+make LDFLAGS="${COMMON_LDFLAGS[*]}" tooldir="${INSTALL_DIR}/bfd-${TARGET}" -j"$(nproc --all)"
+make install tooldir="${INSTALL_DIR}/bfd-${TARGET}"
 
 # Remove unwanted docs
 rm -rf "${INSTALL_DIR}/deleteme"

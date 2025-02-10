@@ -16,14 +16,13 @@
 FROM alpine:edge AS deps-local
 WORKDIR /
 COPY /common/utils.sh .
+COPY /common/push-build.sh .
 COPY /binutils/build-bfd.sh .
 COPY /sysroot/build-avr-sysroot.sh .
-COPY /sysroot/sysroot-push.sh .
 RUN apk add bash coreutils gzip tar xz patchelf git go github-cli make file gcc-avr libarchive-tools build-base gettext libtool autoconf automake bison texinfo zlib-dev zstd-dev python3 zip
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN git config --global user.name "Dakkshesh" && git config --global user.email "dakkshesh5@gmail.com"
 RUN chmod +x build-avr-sysroot.sh && bash build-avr-sysroot.sh
 RUN mv ./install/avr-sysroot ./install/install
 RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --pack-install
-RUN chmod +x sysroot-push.sh && bash sysroot-push.sh "avr"
+RUN bash push-build.sh --gz-tar --zstd-tar --zip --sysroot=avr

@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY: ghcr.io
-  ORG_NAME: clangbuiltarduino
-  IMAGE_NAME: llvm-linux
+  PROJECT: llvmgold
+  PLATFORM: amd64-linux
 
 jobs:
   deps-glibc:
@@ -21,10 +20,11 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: deps-glibc-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-deps-glibc:${{ github.sha }}
+          tags: deps-glibc:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   deps-musl:
@@ -39,10 +39,11 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: deps-musl-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-deps-musl:${{ github.sha }}
+          tags: deps-musl:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1-glibc:
@@ -58,12 +59,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: stage1-glibc-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-stage1-glibc:${{ github.sha }}
+          tags: stage1-glibc:${{ github.sha }}
           build-args: |
-            DEPS_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvm-linux-gold-deps-glibc:${{ github.sha }}
+            DEPS_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps-glibc:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1-musl:
@@ -79,12 +81,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: stage1-musl-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-stage1-musl:${{ github.sha }}
+          tags: stage1-musl:${{ github.sha }}
           build-args: |
-            DEPS_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvm-linux-gold-deps-musl:${{ github.sha }}
+            DEPS_IMAGE_MUSL=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps-musl:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   llvmgold-glibc:
@@ -100,12 +103,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: llvmgold-glibc-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-final-glibc:${{ github.sha }}
+          tags: final-glibc:${{ github.sha }}
           build-args: |
-            STAGE1_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvm-linux-gold-stage1-glibc:${{ github.sha }}
+            STAGE1_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1-glibc:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   llvmgold-musl:
@@ -121,12 +125,13 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: llvmgold-musl-local
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: true
-          tags: gold-final-musl:${{ github.sha }}
+          tags: final-musl:${{ github.sha }}
           build-args: |
-            STAGE1_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvm-linux-gold-stage1-musl:${{ github.sha }}
+            STAGE1_IMAGE_MUSL=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1-musl:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   packaging:
@@ -142,13 +147,14 @@ jobs:
         uses: ./.github/actions/stage-builder
         with:
           target: packing
-          host: linux
+          project: ${{ env.PROJECT }}
+          host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
           push: false
           tags: packing:${{ github.sha }}
           build-args: |
-            FINAL_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvm-linux-gold-final-glibc:${{ github.sha }}
-            FINAL_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvm-linux-gold-final-musl:${{ github.sha }}
+            FINAL_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-final-glibc:${{ github.sha }}
+            FINAL_IMAGE_MUSL=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-final-musl:${{ github.sha }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
           token: ${{ secrets.GITHUB_TOKEN }}
