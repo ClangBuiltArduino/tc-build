@@ -40,7 +40,6 @@ prep_env
 TARGET=""
 BUILD_LD_SCRIPTS=0
 PACK=0
-EXTRA_MAKE_FLAGS="tooldir='${INSTALL_DIR}/bfd-${TARGET}'"
 for arg in "$@"; do
     case "${arg}" in
         "--target"*)
@@ -49,7 +48,6 @@ for arg in "$@"; do
             ;;
         "--linker-scripts")
             BUILD_LD_SCRIPTS=1
-            EXTRA_MAKE_FLAGS=""
             ;;
         "--pack-install")
             PACK=1
@@ -98,8 +96,8 @@ export LDFLAGS="${COMMON_LDFLAGS[*]}"
     --with-static-standard-libraries
 
 make configure-host
-make LDFLAGS="${COMMON_LDFLAGS[*]}" "${EXTRA_MAKE_FLAGS}" -j"$(nproc --all)"
-make install "${EXTRA_MAKE_FLAGS}"
+make LDFLAGS="${COMMON_LDFLAGS[*]}" tooldir="${INSTALL_DIR}/bfd-${TARGET}" -j"$(nproc --all)"
+make install tooldir="${INSTALL_DIR}/bfd-${TARGET}"
 
 # Remove unwanted docs
 rm -rf "${INSTALL_DIR}/deleteme"
