@@ -28,8 +28,10 @@ COMMON_FLAGS+=(
 # Use our static zstd lib to avoid dependency on zstd.
 COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-ldd --version 2>&1 | grep -q musl && COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
+if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
+fi
 
 # Prep env
 prep_env

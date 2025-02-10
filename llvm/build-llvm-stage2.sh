@@ -40,9 +40,9 @@ COMMON_LDFLAGS+=(
 )
 
 # Detect if host has musl or glibc for configuring
-if ldd --version 2>&1 | grep -qi musl; then
+if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-    COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608") # 8MB stack size
 fi
 
 # Prepare environment

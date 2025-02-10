@@ -19,8 +19,10 @@ set -euo pipefail
 
 COMMON_FLAGS+=("-O2" "-fPIC")
 
-# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576")
+if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+    COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
+fi
 
 # Set versions
 ZLIB_VERSION="2.2.3"

@@ -31,6 +31,7 @@ COMMON_LDFLAGS+=(
     "--unwindlib=libunwind"
     "-lc++"
     "-lc++abi"
+    "-Wl,-Bdynamic" # Debian's archive libs are compiled without fPIC
 )
 
 # Detect if host has musl or glibc for configuring
