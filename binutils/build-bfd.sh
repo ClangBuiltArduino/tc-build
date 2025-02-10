@@ -104,10 +104,9 @@ rm -rf "${INSTALL_DIR}/deleteme"
 rm -rf "${INSTALL_DIR}/bfd-${TARGET}/share"
 if [[ $BUILD_LD_SCRIPTS -eq 1 ]]; then
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/bin"
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib"
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/bin"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/bfd-plugins"
 else
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/${TARGET}/lib"
+    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/ldscripts"
 fi
 
 strip_bins "${INSTALL_DIR}/bfd-${TARGET}" "strip"
