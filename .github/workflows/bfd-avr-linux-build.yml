@@ -24,7 +24,7 @@ jobs:
         with:
           context: .
           target: musl
-          file: dockerfiles/bfd/avr-linux.Dockerfile
+          file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
           push: false
           tags: ghcr.io/clangbuiltarduino/avr-bfd-linux-musl:${{ github.sha }}
           secrets: |
@@ -50,7 +50,7 @@ jobs:
         with:
           context: .
           target: glibc
-          file: dockerfiles/bfd/avr-linux.Dockerfile
+          file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
           push: false
           tags: ghcr.io/clangbuiltarduino/avr-bfd-linux-glibc:${{ github.sha }}
           secrets: |
