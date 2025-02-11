@@ -32,7 +32,6 @@ COMMON_LDFLAGS+=(
     "--unwindlib=libunwind"
     "-lc++"
     "-lc++abi"
-    "-Wl,-Bdynamic" # Debian's archive libs are compiled without fPIC
 )
 
 # Detect if host has musl or glibc for configuring
@@ -177,8 +176,8 @@ cmake -G "Ninja" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]} -stdlib=libc++" \
     -DCMAKE_EXE_LINKER_FLAGS="-static ${COMMON_LDFLAGS[*]}" \
-    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
     "${LLVM_SDIR}/llvm"
 
 ninja -j"$(nproc --all)"
