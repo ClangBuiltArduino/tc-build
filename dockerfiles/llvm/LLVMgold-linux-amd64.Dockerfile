@@ -91,6 +91,7 @@ COPY /llvm/build-llvm-gold.sh .
 RUN apt-get update -y
 RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic -y
 RUN bash build-llvm-gold.sh && ls && ls install
+RUN rm -rf /source && rm -rf /build
 
 # MUSL build
 FROM ${STAGE1_IMAGE_MUSL} AS stage1-musl
@@ -102,6 +103,7 @@ COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
 RUN bash build-llvm-gold.sh
+RUN rm -rf /source && rm -rf /build
 
 #########################
 # Packaging LLVMgold.so #
