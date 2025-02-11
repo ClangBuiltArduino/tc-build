@@ -52,7 +52,7 @@ for arg in "$@"; do
             PKG_SYSROOT_TARGET=${PKG_SYSROOT_TARGET:1}
             DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
             PKG_TAG="sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
-            CORSS_PKG=1
+            CROSS_PKG=1
             ;;
         "--pkg-arch"*)
             PKG_ARCH="${arg#*--pkg-arch}"
