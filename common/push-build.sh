@@ -41,7 +41,7 @@ for arg in "$@"; do
             ;;
         "--llvm-gold")
             DIR_NAME="cba-llvm-gold-${LLVM_VERSION}-${PKG_DATE}"
-            PKG_TAG="llvmgold-${LLVM_VERSION}-${PKG_DATE}"
+            PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
             ;;
         "--bfd")
             DIR_NAME="bfd-avr-${BINUTILS_VERSION}-${PKG_DATE}"
@@ -69,7 +69,7 @@ for arg in "$@"; do
     esac
 done
 
-if [[ "$CROSS_PKG" -eq 1 ]]; then
+if [[ $CROSS_PKG -eq 1 ]]; then
     FILE_NAME="${DIR_NAME}-any"
 else
     FILE_NAME="${DIR_NAME}-${PKG_ARCH}-${PKG_OS}"
@@ -80,17 +80,17 @@ cd "${INSTALL_DIR}"
 mv "install" "${DIR_NAME}"
 
 # Create zstd archive
-if [[ "$PKG_USE_ZSTD" -eq 1 ]]; then
+if [[ $PKG_USE_ZSTD -eq 1 ]]; then
     tar -I "zstd -T$(nproc --all) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
 fi
 
 # Create gzip archive
-if [[ "$PKG_USE_ZSTD" -eq 1 ]]; then
+if [[ $PKG_USE_ZSTD -eq 1 ]]; then
     tar -I "gzip --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
 fi
 
 # Create zip archive
-if [[ "$PKG_USE_ZIP" -eq 1 ]]; then
+if [[ $PKG_USE_ZIP -eq 1 ]]; then
     zip -r9 "${FILE_NAME}.zip" "${DIR_NAME}"
 fi
 
