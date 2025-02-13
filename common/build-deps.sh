@@ -25,7 +25,7 @@ if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
 fi
 
 # Set versions
-ZLIB_VERSION="2.2.3"
+ZLIB_VERSION="2.2.4"
 ZSTD_VERSION="1.5.6"
 
 # Prepare environment
