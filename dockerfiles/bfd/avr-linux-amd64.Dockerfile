@@ -26,6 +26,7 @@ RUN apt-get update -y
 RUN apt-get install clang llvm lld binutils cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils git file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 zip -y
 RUN bash build-deps.sh
 RUN bash build-bfd.sh --target=avr --pack-install
+RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --pack-install
 
 ##############
 # musl build #
@@ -39,6 +40,7 @@ COPY /binutils/build-bfd.sh .
 RUN apk add bash clang llvm lld musl-dev binutils cmake ninja libc-dev libstdc++-dev libstdc++ coreutils wget gzip tar xz make file gcc-avr libarchive-tools build-base gettext libtool autoconf automake bison texinfo zlib-dev zstd-dev python3 zip
 RUN bash build-deps.sh
 RUN bash build-bfd.sh --target=avr --pack-install
+RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --pack-install
 
 #############
 # Packaging #
