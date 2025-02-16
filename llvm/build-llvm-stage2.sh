@@ -68,6 +68,7 @@ cmake -G "Ninja" \
     -DBUG_REPORT_URL="https://github.com/ClangBuiltArduino/issue-tracker/issues" \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
     -DLLVM_TARGETS_TO_BUILD="AVR;ARM" \
+    -DLLVM_DEFAULT_TARGET_TRIPLE="arm-none-eabi" \
     -DLLVM_ENABLE_PIC=ON \
     -DLIBCLANG_BUILD_STATIC=ON \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
