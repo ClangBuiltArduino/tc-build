@@ -26,7 +26,7 @@ fi
 
 # Set versions
 ZLIB_VERSION="2.2.4"
-ZSTD_VERSION="1.5.6"
+ZSTD_VERSION="1.5.7"
 
 # Prepare environment
 prep_env
