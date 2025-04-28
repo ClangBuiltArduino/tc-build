@@ -53,6 +53,10 @@ prep_env
 cd "${SOURCE_DIR}"
 get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
 LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
+cd "${LLVM_SDIR}"
+wget "https://github.com/llvm/llvm-project/commit/b0524f332958b6e593868533127fd0651bdcf553.patch"
+patch -Np1 < "b0524f332958b6e593868533127fd0651bdcf553.patch"
+cd -
 
 # Use tools exclusively from bootstrap build if possible.
 export PATH="$INSTALL_DIR/stage1/bin:$PATH"
