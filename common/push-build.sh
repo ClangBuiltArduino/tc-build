@@ -85,7 +85,7 @@ if [[ $PKG_USE_ZSTD -eq 1 ]]; then
 fi
 
 # Create gzip archive
-if [[ $PKG_USE_ZSTD -eq 1 ]]; then
+if [[ $PKG_USE_GZ -eq 1 ]]; then
     tar -I "gzip --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
 fi
 
