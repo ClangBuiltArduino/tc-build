@@ -77,3 +77,20 @@ strip_bins() {
         "$2" "${f}"
     done
 }
+
+get_patch() {
+    echo "Applying patch: $1"
+    curl -sL "$1" | patch -Np1
+}
+
+LLVM_PATCH_LIST=(
+    "https://github.com/llvm/llvm-project/commit/b0524f332958b6e593868533127fd0651bdcf553.patch"
+    "https://github.com/llvm/llvm-project/commit/597accfea6150e77304427fb97d0c3798178e040.patch"
+    "https://github.com/llvm/llvm-project/commit/1db206d1c8d48c107a2e29a1bf6ba2768df2ef7d.patch"
+)
+
+apply_llvm_patches() {
+    for patch in "${LLVM_PATCH_LIST[@]}"; do
+        get_patch "$patch"
+    done
+}
