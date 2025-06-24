@@ -225,7 +225,7 @@ cmake -G "Ninja" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     "${LLVM_SDIR}/llvm"
 
-ninja -j"$(nproc --all)"
+ninja distribution -j"$(nproc --all)"
 ninja install-distribution
 
 echo "LLVM stage2 build completed successfully!"
