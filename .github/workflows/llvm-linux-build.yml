@@ -22,7 +22,7 @@ jobs:
           target: deps-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
           push: true
           tags: deps:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -61,7 +61,7 @@ jobs:
           target: stage1-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
           push: true
           tags: stage1:${{ github.sha }}
           build-args: |
@@ -105,7 +105,7 @@ jobs:
           target: stage2-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
           push: true
           tags: stage2:${{ github.sha }}
           build-args: |
@@ -127,7 +127,7 @@ jobs:
           target: extrabuild
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
           push: false
           tags: extrabuild:${{ github.sha }}
           build-args: |
