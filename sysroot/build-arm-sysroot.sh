@@ -25,7 +25,7 @@ prep_env
 cd "${SOURCE_DIR}"
 get_tar "ftp://sourceware.org/pub/newlib/newlib-${NEWLIB_VER}.tar.gz" "newlib-${NEWLIB_VER}.tar.gz"
 NEWLIB_SDIR="${SOURCE_DIR}/newlib-${NEWLIB_VER}"
-get_tar "https://ftp.gnu.org/gnu/gcc/gcc-14.2.0/gcc-${GCC_VER}.tar.xz" "gcc-${GCC_VER}.tar.xz"
+get_tar "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz" "gcc-${GCC_VER}.tar.xz"
 GCC_SDIR="${SOURCE_DIR}/gcc-${GCC_VER}"
 
 # Build newlib-libc
