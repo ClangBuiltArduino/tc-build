@@ -102,9 +102,11 @@ cmake -G "Ninja" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
     "${LLVM_SDIR}/llvm"
 
-ninja -j"$(nproc --all)"
+ninja
 rm -rf "${INSTALL_DIR}/stage1"
 ninja install
 

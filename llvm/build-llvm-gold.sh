@@ -178,9 +178,11 @@ cmake -G "Ninja" \
     -DCMAKE_EXE_LINKER_FLAGS="-static ${COMMON_LDFLAGS[*]}" \
     -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
     "${LLVM_SDIR}/llvm"
 
-ninja distribution -j"$(nproc --all)"
+ninja distribution
 ninja install-distribution
 
 # Strip remaining products
