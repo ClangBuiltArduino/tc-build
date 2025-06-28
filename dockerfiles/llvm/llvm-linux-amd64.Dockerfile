@@ -60,7 +60,7 @@ COPY --from=stage1 /install ./install
 RUN ls && ls install
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make curl cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
 RUN bash build-llvm-stage2.sh
 RUN rm -rf /source && rm -rf /build
 
