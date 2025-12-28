@@ -23,9 +23,9 @@ prep_env
 
 # Get sources
 cd "${SOURCE_DIR}"
-get_tar "https://github.com/ClangBuiltArduino/avr-libc/archive/refs/heads/${AVR_LIBC_VER}.tar.gz" "avr-libc-${AVR_LIBC_VER}.tar.gz"
+get_tar "${AVR_LIBC_URL}" "avr-libc-${AVR_LIBC_VER}.tar.bz2"
 AVR_LIBC_SDIR="${SOURCE_DIR}/avr-libc-${AVR_LIBC_VER}"
-get_tar "https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz" "gcc-${GCC_VER}.tar.xz"
+get_tar "${GCC_URL}" "gcc-${GCC_VER}.tar.xz"
 GCC_SDIR="${SOURCE_DIR}/gcc-${GCC_VER}"
 
 # Build avr-libc

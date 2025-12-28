@@ -16,14 +16,28 @@
 #
 set -euo pipefail
 
+# Find and source versions.conf
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+if [[ -f "${SCRIPT_DIR}/../versions.conf" ]]; then
+    source "${SCRIPT_DIR}/../versions.conf"
+elif [[ -f "/versions.conf" ]]; then
+    source "/versions.conf" # Docker context
+elif [[ -f "./versions.conf" ]]; then
+    source "./versions.conf"
+fi
+
 CURR_DIR=$(pwd)
 
-# Set versions
-export AVR_LIBC_VER="2.2.1-clang"
-export BINUTILS_VERSION="2.44"
-export GCC_VER="15.1.0"
-export NEWLIB_VER="4.5.0.20241231"
-export LLVM_VERSION="20.1.7"
+# Export versions for compatibility with existing scripts
+export AVR_LIBC_VER="${AVR_LIBC_VERSION}"
+export AVR_LIBC_URL="${AVR_LIBC_URL}"
+export BINUTILS_VERSION="${BINUTILS_VERSION}"
+export GCC_VER="${GCC_VERSION}"
+export GCC_URL="${GCC_URL}"
+export NEWLIB_VER="${NEWLIB_VERSION}"
+export LLVM_VERSION="${LLVM_VERSION}"
+export ZLIB_VERSION="${ZLIB_VERSION}"
+export ZSTD_VERSION="${ZSTD_VERSION}"
 
 # Configuration
 SOURCE_DIR="${CURR_DIR}/source"
@@ -83,14 +97,8 @@ get_patch() {
     curl -sL "$1" | patch -Np1
 }
 
-LLVM_PATCH_LIST=(
-    "https://github.com/llvm/llvm-project/commit/b0524f332958b6e593868533127fd0651bdcf553.patch"
-    "https://github.com/llvm/llvm-project/commit/597accfea6150e77304427fb97d0c3798178e040.patch"
-    "https://github.com/llvm/llvm-project/commit/1db206d1c8d48c107a2e29a1bf6ba2768df2ef7d.patch"
-)
-
 apply_llvm_patches() {
-    for patch in "${LLVM_PATCH_LIST[@]}"; do
+    for patch in "${LLVM_PATCHES[@]}"; do
         get_patch "$patch"
     done
 }

@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-source utils.sh # Include basic common utilities
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
 COMMON_FLAGS+=("-O2" "-fPIC")
@@ -24,20 +25,18 @@ if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
 fi
 
-# Set versions
-ZLIB_VERSION="2.2.4"
-ZSTD_VERSION="1.5.7"
+# Versions come from utils.sh (via versions.conf)
 
 # Prepare environment
 prep_env
 
 # Get sources
 cd "${SOURCE_DIR}"
-get_tar "https://github.com/zlib-ng/zlib-ng/archive/refs/tags/${ZLIB_VERSION}.tar.gz" "zlib-${ZLIB_VERSION}.tar.gz"
+get_tar "${ZLIB_URL}" "zlib-${ZLIB_VERSION}.tar.gz"
 ZLIB_SDIR="${SOURCE_DIR}/zlib-${ZLIB_VERSION}"
 
-get_tar "https://github.com/facebook/zstd/archive/refs/tags/v${ZSTD_VERSION}.tar.gz" "zstd-${ZLIB_VERSION}.tar.gz"
-ZSTD_SDIR="${SOURCE_DIR}/zstd-${ZLIB_VERSION}"
+get_tar "${ZSTD_URL}" "zstd-${ZSTD_VERSION}.tar.gz"
+ZSTD_SDIR="${SOURCE_DIR}/zstd-${ZSTD_VERSION}"
 
 # Build zlib
 init_build_dir "${BUILD_DIR}/zlib"

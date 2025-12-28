@@ -15,6 +15,7 @@
 
 FROM alpine:edge AS deps-local
 WORKDIR /
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
 COPY /binutils/build-bfd.sh .

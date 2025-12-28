@@ -22,6 +22,7 @@ ARG STAGE2_IMAGE=stage2-local
 ##############
 FROM alpine:edge AS deps-local
 WORKDIR /
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
@@ -40,6 +41,7 @@ FROM alpine:edge AS stage1-local
 WORKDIR /
 COPY --from=deps /install ./install
 RUN ls && ls install
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
@@ -58,6 +60,7 @@ FROM alpine:edge AS stage2-local
 WORKDIR /
 COPY --from=stage1 /install ./install
 RUN ls && ls install
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
 RUN apk add clang llvm lld build-base musl-dev coreutils binutils make curl cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
@@ -77,6 +80,7 @@ WORKDIR /
 COPY --from=stage2 /install/install ./install/install
 COPY --from=stage2 /install/stage1 ./install/stage1
 RUN ls && ls install
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
 COPY /llvm/build-extra.sh .

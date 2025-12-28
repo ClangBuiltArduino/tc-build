@@ -28,6 +28,7 @@ prep_env
 
 # Get clang-wrapper source
 cd "${SOURCE_DIR}"
+rm -rf clang-wrapper
 git clone "https://github.com/ClangBuiltArduino/clang-wrapper.git" clang-wrapper
 cd clang-wrapper
 make

@@ -19,6 +19,7 @@
 
 FROM debian:bookworm AS glibc-build
 WORKDIR /
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 COPY /binutils/build-bfd.sh .
@@ -34,6 +35,7 @@ RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --p
 
 FROM alpine:edge AS musl-build
 WORKDIR /
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 COPY /binutils/build-bfd.sh .
@@ -51,6 +53,7 @@ WORKDIR /
 COPY --from=glibc-build /install/install ./install/install/glibc
 COPY --from=musl-build /install/install ./install/install/musl
 RUN ls && ls install
+COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git github-cli file
