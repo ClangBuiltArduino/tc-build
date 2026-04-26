@@ -62,7 +62,7 @@ check_deps() {
     if [[ $missing -eq 1 ]]; then
         echo -e "\n${RED}Missing required tools. Install them and try again.${NC}"
         exit 1
-    fi# For CI builds, use the Dockerfiles in dockerfiles/
+    fi
     echo ""
 }
 
