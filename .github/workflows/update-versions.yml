@@ -39,7 +39,11 @@ jobs:
           }
 
           get_gcc_version() {
-            curl -sL "https://gcc.gnu.org/releases.html" | grep -oE "GCC [0-9]+\.[0-9]+(\.[0-9]+)?" | head -1 | grep -oE "[0-9]+\.[0-9]+(\.[0-9]+)?"
+            local version=$(curl -sL "https://gcc.gnu.org/releases.html" | grep -oE "GCC [0-9]+\.[0-9]+(\.[0-9]+)?" | head -1 | grep -oE "[0-9]+\.[0-9]+(\.[0-9]+)?")
+            if [[ "$version" =~ ^[0-9]+\.[0-9]+$ ]]; then
+              version="${version}.0"
+            fi
+            echo "$version"
           }
 
           UPDATE_MADE=0
