@@ -15,8 +15,10 @@ jobs:
       - name: Delete old ephemeral images and untagged builds
         uses: snok/container-retention-policy@v3.1.0
         with:
-          account-type: org
-          org-name: clangbuiltarduino
+          account: ClangBuiltArduino
+          token: ${{ secrets.GITHUB_TOKEN }}
+          cut-off: 2d
+          keep-n-most-recent: 1
           image-names: |
             llvm-amd64-linux-deps
             llvm-amd64-linux-deps-glibc
@@ -25,8 +27,4 @@ jobs:
             llvm-amd64-linux-stage2
             llvmgold-amd64-linux-final-musl
             llvmgold-amd64-linux-final-glibc
-          cut-off: 2 days
-          keep-at-least: 1
-          untagged-only: false
-          skip-tags: latest
-          token: ${{ secrets.GITHUB_TOKEN }}
+  
