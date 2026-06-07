@@ -43,3 +43,4 @@ runs:
         tags: ghcr.io/clangbuiltarduino/sysroot-${{ inputs.target }}:${{ inputs.sha }}
         build-args: ${{ inputs.build-args }}
         secrets: ${{ inputs.secrets }}
+        provenance: false

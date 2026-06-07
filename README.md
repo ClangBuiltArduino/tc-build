@@ -5,6 +5,7 @@ Build scripts for a slim LLVM-based toolchain targeting AVR and ARM (Arduino).
 ## Build locally
 ```bash
 ./build.sh llvm          # Build complete LLVM toolchain
+./build.sh llvm --head-source  # Build LLVM from a shallow git checkout of HEAD
 ./build.sh sysroot-avr   # Build AVR sysroot
 ./build.sh --help        # See all options
 ```

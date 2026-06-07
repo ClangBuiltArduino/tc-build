@@ -53,3 +53,4 @@ runs:
         tags: ghcr.io/clangbuiltarduino/${{ inputs.project }}-${{ inputs.host }}-${{ inputs.tags }}
         build-args: ${{ inputs.build-args }}
         secrets: ${{ inputs.secrets }}
+        provenance: false

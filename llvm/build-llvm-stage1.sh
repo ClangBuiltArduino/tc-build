@@ -21,10 +21,12 @@ set -euo pipefail
 # Prepare environment
 prep_env
 
+# Get source mode from args.
+parse_llvm_source_args "$@"
+
 # Get sources
 cd "${SOURCE_DIR}"
-get_tar "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" "llvm-project-${LLVM_VERSION}.tar.xz"
-LLVM_SDIR="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
+LLVM_SDIR="$(get_llvm_source)"
 
 # Detect if host has musl or glibc for configuring
 if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then

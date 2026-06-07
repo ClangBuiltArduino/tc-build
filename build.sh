@@ -35,6 +35,7 @@ Targets:
 
 Options:
   --help, -h      Show this help
+    --head-source   Use a shallow git clone of llvm-project HEAD for LLVM targets
 
 Examples:
   ./build.sh deps           # Build dependencies first
@@ -80,6 +81,7 @@ run_script() {
 }
 
 target="${1:-}"
+shift || true
 
 case "$target" in
     deps)
@@ -88,26 +90,26 @@ case "$target" in
         ;;
     llvm-stage1)
         check_deps
-        run_script llvm/build-llvm-stage1.sh
+        run_script llvm/build-llvm-stage1.sh "$@"
         ;;
     llvm-stage2)
         check_deps
-        run_script llvm/build-llvm-stage2.sh
+        run_script llvm/build-llvm-stage2.sh "$@"
         ;;
     llvm-gold)
         check_deps
-        run_script llvm/build-llvm-gold.sh
+        run_script llvm/build-llvm-gold.sh "$@"
         ;;
     llvm)
         check_deps
         echo -e "${CYAN}=== Building complete LLVM toolchain ===${NC}\n"
         run_script common/build-deps.sh
         echo ""
-        run_script llvm/build-llvm-stage1.sh
+        run_script llvm/build-llvm-stage1.sh "$@"
         echo ""
-        run_script llvm/build-llvm-stage2.sh
+        run_script llvm/build-llvm-stage2.sh "$@"
         echo ""
-        run_script llvm/build-llvm-gold.sh
+        run_script llvm/build-llvm-gold.sh "$@"
         echo ""
         run_script llvm/build-extra.sh
         echo -e "\n${GREEN}=== LLVM toolchain build complete ===${NC}"
@@ -127,11 +129,11 @@ case "$target" in
         ;;
     bfd)
         check_deps
-        if [[ -z ${2:-} ]]; then
+        if [[ -z ${1:-} ]]; then
             echo -e "${YELLOW}Usage: ./build.sh bfd --target=avr${NC}"
             exit 1
         fi
-        run_script binutils/build-bfd.sh "$2"
+        run_script binutils/build-bfd.sh "$@"
         ;;
     clean)
         echo -e "${CYAN}Cleaning build artifacts...${NC}"

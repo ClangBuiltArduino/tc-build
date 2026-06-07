@@ -80,6 +80,46 @@ get_tar() {
     fi
 }
 
+parse_llvm_source_args() {
+    LLVM_SOURCE_MODE="release"
+
+    for arg in "$@"; do
+        case "$arg" in
+            --head-source)
+                LLVM_SOURCE_MODE="head"
+                ;;
+        esac
+    done
+}
+
+get_llvm_source() {
+    local llvm_sdir="${SOURCE_DIR}/llvm-project-${LLVM_VERSION}"
+
+    if [[ ${LLVM_SOURCE_MODE:-release} == "head" ]]; then
+        if [[ -d "${llvm_sdir}/.git" ]]; then
+            echo "Updating existing LLVM HEAD checkout..."
+            git -C "${llvm_sdir}" fetch --depth 1 origin main
+            git -C "${llvm_sdir}" reset --hard FETCH_HEAD
+            git -C "${llvm_sdir}" clean -fdx
+        else
+            if [[ -e ${llvm_sdir} ]]; then
+                rm -rf "${llvm_sdir}"
+            fi
+
+            echo "Cloning LLVM HEAD checkout..."
+            git clone --depth 1 --single-branch --branch main https://github.com/llvm/llvm-project.git "${llvm_sdir}"
+        fi
+    else
+        if [[ -d "${llvm_sdir}/.git" ]]; then
+            rm -rf "${llvm_sdir}"
+        fi
+
+        get_tar "${LLVM_URL}" "llvm-project-${LLVM_VERSION}.tar.xz"
+    fi
+
+    printf '%s\n' "${llvm_sdir}"
+}
+
 init_build_dir() {
     rm -rf "$1" && mkdir "$1" && cd "$1"
 }
@@ -98,6 +138,10 @@ get_patch() {
 }
 
 apply_llvm_patches() {
+    if [[ -z ${LLVM_PATCHES+x} ]]; then
+        return
+    fi
+
     for patch in "${LLVM_PATCHES[@]}"; do
         get_patch "$patch"
     done

@@ -1,0 +1,32 @@
+name: Auto Image Cleaner
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Run every Sunday at midnight
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  cleanup-ephemeral-images:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Delete old ephemeral images and untagged builds
+        uses: snok/container-retention-policy@v3.0.0
+        with:
+          account-type: org
+          org-name: clangbuiltarduino
+          image-names: |
+            llvm-amd64-linux-deps
+            llvm-amd64-linux-deps-glibc
+            llvm-amd64-linux-stage1
+            llvm-amd64-linux-stage1-glibc
+            llvm-amd64-linux-stage2
+            llvmgold-amd64-linux-final-musl
+            llvmgold-amd64-linux-final-glibc
+          cut-off: 2 days
+          keep-at-least: 1
+          untagged-only: false
+          skip-tags: latest
+          token: ${{ secrets.GITHUB_TOKEN }}
