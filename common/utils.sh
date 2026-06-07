@@ -59,21 +59,21 @@ prep_env() {
 }
 
 get_tar() {
-    echo "Checking for existing file: $2"
+    echo "Checking for existing file: $2" >&2
 
     # Get the base filename by stripping common multi-extension suffixes
     extract_dir="${2%.tar.*}" # Removes .tar.gz, .tar.xz, .tar.bz2, etc.
 
     if [ -d "$extract_dir" ]; then
-        echo "Extraction directory '$extract_dir' already exists. Skipping extraction."
+        echo "Extraction directory '$extract_dir' already exists. Skipping extraction." >&2
     else
         if [ -f "$2" ]; then
-            echo "Using existing file: $2"
+            echo "Using existing file: $2" >&2
         else
-            echo "Downloading from $1 as $2 ..."
+            echo "Downloading from $1 as $2 ..." >&2
             wget -O"$2" "$1"
         fi
-        echo "Extracting $2 into $extract_dir ..."
+        echo "Extracting $2 into $extract_dir ..." >&2
         mkdir "$extract_dir"
         bsdtar -xf "$2" -C "$extract_dir" --strip-components=1 # Removes the top-level directory
         rm -f "$2"
@@ -97,24 +97,24 @@ get_llvm_source() {
 
     if [[ ${LLVM_SOURCE_MODE:-release} == "head" ]]; then
         if [[ -d "${llvm_sdir}/.git" ]]; then
-            echo "Updating existing LLVM HEAD checkout..."
-            git -C "${llvm_sdir}" fetch --depth 1 origin main
-            git -C "${llvm_sdir}" reset --hard FETCH_HEAD
-            git -C "${llvm_sdir}" clean -fdx
+            echo "Updating existing LLVM HEAD checkout..." >&2
+            git -C "${llvm_sdir}" fetch --depth 1 origin main >&2
+            git -C "${llvm_sdir}" reset --hard FETCH_HEAD >&2
+            git -C "${llvm_sdir}" clean -fdx >&2
         else
             if [[ -e ${llvm_sdir} ]]; then
-                rm -rf "${llvm_sdir}"
+                rm -rf "${llvm_sdir}" >&2
             fi
 
-            echo "Cloning LLVM HEAD checkout..."
-            git clone --depth 1 --single-branch --branch main https://github.com/llvm/llvm-project.git "${llvm_sdir}"
+            echo "Cloning LLVM HEAD checkout..." >&2
+            git clone --depth 1 --single-branch --branch main https://github.com/llvm/llvm-project.git "${llvm_sdir}" >&2
         fi
     else
         if [[ -d "${llvm_sdir}/.git" ]]; then
-            rm -rf "${llvm_sdir}"
+            rm -rf "${llvm_sdir}" >&2
         fi
 
-        get_tar "${LLVM_URL}" "llvm-project-${LLVM_VERSION}.tar.xz"
+        get_tar "${LLVM_URL}" "llvm-project-${LLVM_VERSION}.tar.xz" >&2
     fi
 
     printf '%s\n' "${llvm_sdir}"
