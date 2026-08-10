@@ -22,7 +22,7 @@ set -euo pipefail
 prep_env
 
 # Get source mode from args.
-parse_llvm_source_args "$@"
+parse_source_args "$@"
 
 # Get sources
 cd "${SOURCE_DIR}"

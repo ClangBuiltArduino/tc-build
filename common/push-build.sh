@@ -25,6 +25,7 @@ CROSS_PKG=0
 PKG_USE_GZ=0
 PKG_USE_ZSTD=0
 PKG_USE_ZIP=0
+PKG_NIGHTLY=0
 for arg in "$@"; do
     case "${arg}" in
         "--gz-tar")
@@ -36,23 +37,30 @@ for arg in "$@"; do
         "--zip")
             PKG_USE_ZIP=1
             ;;
+        "--nightly")
+            PKG_NIGHTLY=1
+            ;;
         "--llvm-tc")
             DIR_NAME="cba-llvm-${LLVM_VERSION}-${PKG_DATE}"
             PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
+            ARTIFACT="llvm"
             ;;
         "--llvm-gold")
             DIR_NAME="cba-llvm-gold-${LLVM_VERSION}-${PKG_DATE}"
             PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
+            ARTIFACT="llvm-gold"
             ;;
         "--bfd")
             DIR_NAME="bfd-avr-${BINUTILS_VERSION}-${PKG_DATE}"
             PKG_TAG="bfd-${BINUTILS_VERSION}-${PKG_DATE}"
+            ARTIFACT="bfd"
             ;;
         "--sysroot"*)
             PKG_SYSROOT_TARGET="${arg#*--sysroot}"
             PKG_SYSROOT_TARGET=${PKG_SYSROOT_TARGET:1}
             DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
             PKG_TAG="sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
+            ARTIFACT="sysroot"
             CROSS_PKG=1
             ;;
         "--pkg-arch"*)
@@ -69,6 +77,29 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# Nightly packages drop pinned version numbers (they track git HEAD) and use a
+# `nightly-` tag prefix so the BoardManager updater can pick them out.
+if [[ ${PKG_NIGHTLY} -eq 1 ]]; then
+    case "${ARTIFACT}" in
+        llvm)
+            DIR_NAME="cba-llvm-nightly-${PKG_DATE}"
+            PKG_TAG="nightly-llvm-${PKG_DATE}"
+            ;;
+        llvm-gold)
+            DIR_NAME="cba-llvm-gold-nightly-${PKG_DATE}"
+            PKG_TAG="nightly-llvm-${PKG_DATE}"
+            ;;
+        bfd)
+            DIR_NAME="bfd-avr-nightly-${PKG_DATE}"
+            PKG_TAG="nightly-bfd-${PKG_DATE}"
+            ;;
+        sysroot)
+            DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-nightly-${PKG_DATE}"
+            PKG_TAG="nightly-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
+            ;;
+    esac
+fi
 
 if [[ $CROSS_PKG -eq 1 ]]; then
     FILE_NAME="${DIR_NAME}-any"

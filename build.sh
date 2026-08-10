@@ -35,7 +35,8 @@ Targets:
 
 Options:
   --help, -h      Show this help
-    --head-source   Use a shallow git clone of llvm-project HEAD for LLVM targets
+  --head-source   Use a shallow git clone of upstream HEAD for LLVM and
+                  avr-libc targets (nightly builds)
 
 Examples:
   ./build.sh deps           # Build dependencies first
@@ -117,7 +118,7 @@ case "$target" in
         ;;
     sysroot-avr)
         check_deps
-        run_script sysroot/build-avr-sysroot.sh
+        run_script sysroot/build-avr-sysroot.sh "$@"
         echo -e "\n${GREEN}=== avr sysroot build complete ===${NC}"
         echo -e "Output: ${SCRIPT_DIR}/install/install/"
         ;;

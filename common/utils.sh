@@ -80,16 +80,19 @@ get_tar() {
     fi
 }
 
-parse_llvm_source_args() {
-    LLVM_SOURCE_MODE="release"
+parse_source_args() {
+    SOURCE_MODE="release"
 
     for arg in "$@"; do
         case "$arg" in
             --head-source)
-                LLVM_SOURCE_MODE="head"
+                SOURCE_MODE="head"
                 ;;
         esac
     done
+
+    # Compatibility alias for LLVM-only callers
+    LLVM_SOURCE_MODE="${SOURCE_MODE}"
 }
 
 get_llvm_source() {
@@ -118,6 +121,27 @@ get_llvm_source() {
     fi
 
     printf '%s\n' "${llvm_sdir}"
+}
+
+get_avr_libc_source() {
+    local libc_sdir="${SOURCE_DIR}/avr-libc-${AVR_LIBC_VER}"
+
+    if [[ ${SOURCE_MODE:-release} == "head" ]]; then
+        if [[ -d "${libc_sdir}/.git" ]]; then
+            echo "Updating existing avr-libc HEAD checkout..." >&2
+            git -C "${libc_sdir}" fetch --depth 1 origin main >&2
+            git -C "${libc_sdir}" reset --hard FETCH_HEAD >&2
+            git -C "${libc_sdir}" clean -fdx >&2
+        else
+            rm -rf "${libc_sdir}" >&2
+            echo "Cloning avr-libc HEAD checkout..." >&2
+            git clone --depth 1 --single-branch --branch main https://github.com/avrdudes/avr-libc.git "${libc_sdir}" >&2
+        fi
+    else
+        get_tar "${AVR_LIBC_URL}" "avr-libc-${AVR_LIBC_VER}.tar.bz2" >&2
+    fi
+
+    printf '%s\n' "${libc_sdir}"
 }
 
 init_build_dir() {

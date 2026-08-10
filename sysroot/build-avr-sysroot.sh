@@ -21,10 +21,14 @@ set -euo pipefail
 # Prepare env
 prep_env
 
+# Get source mode from args.
+parse_source_args "$@"
+
 # Get sources
 cd "${SOURCE_DIR}"
-get_tar "${AVR_LIBC_URL}" "avr-libc-${AVR_LIBC_VER}.tar.bz2"
-AVR_LIBC_SDIR="${SOURCE_DIR}/avr-libc-${AVR_LIBC_VER}"
+AVR_LIBC_SDIR="$(get_avr_libc_source)"
+# ponytail: libgcc always comes from a GCC release tarball; a git-master GCC
+# build blows past runner limits and libgcc barely changes. Use the tarball.
 get_tar "${GCC_URL}" "gcc-${GCC_VER}.tar.xz"
 GCC_SDIR="${SOURCE_DIR}/gcc-${GCC_VER}"
 

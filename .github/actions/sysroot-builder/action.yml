@@ -28,14 +28,14 @@ runs:
   using: "composite"
   steps:
     - name: Log in to Container registry
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
-        username: dakkshesh07
+        username: ${{ github.actor }}
         password: ${{ inputs.token }}
         
     - name: Build and push
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: dockerfiles/sysroot/${{ inputs.target }}.Dockerfile
