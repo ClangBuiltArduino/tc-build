@@ -45,7 +45,7 @@ RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers git
 RUN bash build-llvm-stage1.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source) && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
@@ -65,7 +65,7 @@ RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make curl cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make curl cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers git
 RUN bash build-llvm-stage2.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
 
