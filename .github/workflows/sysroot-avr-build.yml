@@ -11,6 +11,11 @@ on:
   schedule:
     - cron: '0 0 * * *'
 
+# Serialize runs: pipelines publish releases and GHCR images.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.nightly }}
+  cancel-in-progress: false
+
 env:
   NIGHTLY: ${{ (github.event_name == 'schedule' || inputs.nightly) && '1' || '0' }}
 
