@@ -7,9 +7,10 @@ on:
         description: 'Build avr-libc from git HEAD and publish as nightly packages'
         type: boolean
         default: false
-  # Scheduled runs are always nightly builds
+  # Scheduled runs are always nightly builds. Offset from the LLVM pipeline
+  # (00:00 UTC) so both don't hammer GHCR with pushes at the same moment.
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '30 1 * * *'
 
 # Serialize runs: pipelines publish releases and GHCR images.
 concurrency:
