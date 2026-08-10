@@ -111,7 +111,7 @@ RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake curl ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake curl ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers git
 RUN bash build-llvm-gold.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
 
