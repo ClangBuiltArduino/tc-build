@@ -78,25 +78,24 @@ for arg in "$@"; do
     esac
 done
 
-# Nightly packages drop pinned version numbers (they track git HEAD) and use a
-# `nightly-` tag prefix so the BoardManager updater can pick them out.
+# Nightly packages all share one rolling `nightly` release with fixed asset
+# names, re-uploaded daily, so the Releases page keeps a single nightly entry
+# instead of one per day. The board-manager index still bumps versions daily
+# (that is what triggers updates in arduino-cli).
 if [[ ${PKG_NIGHTLY} -eq 1 ]]; then
+    PKG_TAG="nightly"
     case "${ARTIFACT}" in
         llvm)
-            DIR_NAME="cba-llvm-nightly-${PKG_DATE}"
-            PKG_TAG="nightly-llvm-${PKG_DATE}"
+            DIR_NAME="cba-llvm-nightly"
             ;;
         llvm-gold)
-            DIR_NAME="cba-llvm-gold-nightly-${PKG_DATE}"
-            PKG_TAG="nightly-llvm-${PKG_DATE}"
+            DIR_NAME="cba-llvm-gold-nightly"
             ;;
         bfd)
-            DIR_NAME="bfd-avr-nightly-${PKG_DATE}"
-            PKG_TAG="nightly-bfd-${PKG_DATE}"
+            DIR_NAME="bfd-avr-nightly"
             ;;
         sysroot)
-            DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-nightly-${PKG_DATE}"
-            PKG_TAG="nightly-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
+            DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-nightly"
             ;;
     esac
 fi
@@ -129,17 +128,30 @@ fi
 git clone "https://github.com/ClangBuiltArduino/tc-build.git" "tc-build"
 cd "tc-build"
 
-PKG_REL_TITLE="$(echo "$PKG_TAG" | tr '-' ' ')"
+if [[ ${PKG_NIGHTLY} -eq 1 ]]; then
+    PKG_REL_TITLE="ClangBuiltArduino Nightly"
+    PKG_REL_NOTES="Rolling nightly builds from upstream git HEAD (LLVM, avr-libc, core).
+Assets are refreshed in place daily; the board-manager nightly index carries
+the daily version numbers and checksums."
+    PKG_REL_EXTRA_ARGS="--prerelease"
+else
+    PKG_REL_TITLE="$(echo "$PKG_TAG" | tr '-' ' ')"
+    PKG_REL_NOTES=""
+    PKG_REL_EXTRA_ARGS=""
+fi
 
 for archive in "${INSTALL_DIR}/${FILE_NAME}".*; do
-    if gh release view "${PKG_TAG}"; then
+    if gh release view "${PKG_TAG}" >/dev/null 2>&1; then
         echo "Uploading build archive on tag '${PKG_TAG}'..."
         gh release upload --clobber "${PKG_TAG}" "${archive}" && {
             echo "Uploaded: ${archive}"
         }
     else
         echo "Creating release with tag '${PKG_TAG}'..."
-        gh release create "${PKG_TAG}" "${archive}" -t "${PKG_REL_TITLE}" -n "" && {
+        # If another pipeline created the release concurrently, just upload.
+        gh release create "${PKG_TAG}" "${archive}" ${PKG_REL_EXTRA_ARGS} \
+            -t "${PKG_REL_TITLE}" -n "${PKG_REL_NOTES}" ||
+            gh release upload --clobber "${PKG_TAG}" "${archive}" && {
             echo "Version ${PKG_TAG} released!" && {
                 echo "Uploaded: ${archive}"
             }
