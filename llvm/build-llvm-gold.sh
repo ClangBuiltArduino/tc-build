@@ -18,11 +18,21 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# Set path for using libs from stage 1
-COMMON_LDFLAGS+=(
-    "-L${INSTALL_DIR}/stage1/lib"
-    "-L${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/"
-)
+# Cross builds (CROSS_TOOLCHAIN_FILE set) use the distro cross compiler in a
+# single stage; native builds use the stage1 bootstrap compiler.
+if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+    COMPILER_ARGS=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+    CROSS_BUILD=1
+else
+    COMPILER_ARGS=(-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang"
+        -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++")
+    CROSS_BUILD=0
+    # Set path for using libs from stage 1
+    COMMON_LDFLAGS+=(
+        "-L${INSTALL_DIR}/stage1/lib"
+        "-L${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/"
+    )
+fi
 
 # Static-libc++ link dance is a Linux/glibc-musl concern only.
 if [[ $(uname -s) == "Linux" ]]; then
@@ -54,11 +64,13 @@ LLVM_SDIR="$(get_llvm_source)"
 get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
 BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 
-# Use tools exclusively from bootstrap build if possible.
-export PATH="$INSTALL_DIR/stage1/bin:$PATH"
-export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/x86_64-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+if [[ ${CROSS_BUILD} -eq 0 ]]; then
+    # Use tools exclusively from bootstrap build if possible.
+    export PATH="$INSTALL_DIR/stage1/bin:$PATH"
+    export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+fi
 
-# Build stage2
+# Build gold plugin
 init_build_dir "${BUILD_DIR}/llvmgold"
 cmake -G "Ninja" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -67,16 +79,17 @@ cmake -G "Ninja" \
     -DLLVM_DISTRIBUTION_COMPONENTS="LLVMgold" \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/install" \
     -DLLVM_BINUTILS_INCDIR="${BINUTILS_SDIR}/include" \
+    $([[ ${CROSS_BUILD} -eq 1 ]] && echo "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--export=onload") \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
     -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_BUILD_UTILS=OFF \
     -DLLVM_CCACHE_BUILD=ON \
     -DLLVM_ENABLE_BACKTRACES=OFF \
     -DLLVM_ENABLE_BINDINGS=OFF \
-    -DLLVM_ENABLE_LIBCXX=ON \
+    -DLLVM_ENABLE_LIBCXX="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo ON)" \
     -DLLVM_ENABLE_LIBXML2=OFF \
     -DLLVM_ENABLE_LLD=ON \
-    -DLLVM_ENABLE_LTO=THIN \
+    -DLLVM_ENABLE_LTO="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo THIN)" \
     -DLLVM_ENABLE_OCAMLDOC=OFF \
     -DLLVM_ENABLE_PIC=ON \
     -DLLVM_ENABLE_ZLIB=ON \
@@ -175,8 +188,7 @@ cmake -G "Ninja" \
     -DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
     -Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
     -Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
-    -DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang" \
-    -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++" \
+    "${COMPILER_ARGS[@]}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -stdlib=libc++")" \
     -DCMAKE_EXE_LINKER_FLAGS="$([[ $(uname -s) == Linux ]] && echo -static) ${COMMON_LDFLAGS[*]}" \

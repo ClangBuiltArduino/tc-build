@@ -59,9 +59,18 @@ cd "${LLVM_SDIR}"
 apply_llvm_patches
 cd -
 
-# Use tools exclusively from bootstrap build if possible.
-export PATH="$INSTALL_DIR/stage1/bin:$PATH"
-export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/x86_64-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+# Cross builds (CROSS_TOOLCHAIN_FILE set) use the distro cross compiler in a
+# single stage; native builds use the stage1 bootstrap compiler.
+if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+    COMPILER_ARGS=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+    CROSS_BUILD=1
+else
+    export PATH="$INSTALL_DIR/stage1/bin:$PATH"
+    export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+    COMPILER_ARGS=(-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang"
+        -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++")
+    CROSS_BUILD=0
+fi
 
 # Build stage2
 init_build_dir "${BUILD_DIR}/stage2"
@@ -83,10 +92,10 @@ cmake -G "Ninja" \
 	-DLLVM_BUILD_UTILS=OFF \
 	-DLLVM_ENABLE_BACKTRACES=OFF \
 	-DLLVM_ENABLE_BINDINGS=OFF \
-	-DLLVM_ENABLE_LIBCXX=ON \
+	-DLLVM_ENABLE_LIBCXX="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo ON)" \
 	-DLLVM_ENABLE_LIBXML2=OFF \
 	-DLLVM_ENABLE_LLD=ON \
-	-DLLVM_ENABLE_LTO=THIN \
+	-DLLVM_ENABLE_LTO="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo THIN)" \
 	-DLLVM_ENABLE_OCAMLDOC=OFF \
 	-DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR='' \
 	-DLLVM_INCLUDE_BENCHMARKS=OFF \
@@ -110,10 +119,9 @@ cmake -G "Ninja" \
 	-DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
 	-Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
 	-Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
-	-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang" \
-	-DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++" \
+    "${COMPILER_ARGS[@]}" \
 	-DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
-	-DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]} -stdlib=libc++" \
+	-DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ ${CROSS_BUILD} -eq 0 ]] && echo " -stdlib=libc++")" \
 	-DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
 	-DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
 	-DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \

@@ -1,0 +1,67 @@
+name: LLVM Windows Build Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: 'Build from upstream git HEAD and publish as nightly packages'
+        type: boolean
+        default: false
+  # Scheduled runs are always nightly builds (offset from the Linux pipeline).
+  schedule:
+    - cron: '15 0 * * *'
+
+# Serialize runs: pipelines publish releases and GHCR images.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.nightly }}
+  cancel-in-progress: false
+
+env:
+  NIGHTLY: ${{ (github.event_name == 'schedule' || inputs.nightly) && '1' || '0' }}
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Single-stage mingw cross build: LLVM toolchain, LLVMgold.dll and the
+      # BFD linker for an i686-w64-mingw32 host, all pushed by the packing
+      # stage.
+      - name: Build toolchain for i686-w64-mingw32
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: packing
+          file: dockerfiles/llvm/llvm-windows-i686.Dockerfile
+          push: false
+          tags: ghcr.io/clangbuiltarduino/llvm-i686-windows:${{ github.sha }}
+          build-args: |
+            NIGHTLY=${{ env.NIGHTLY }}
+          secrets: |
+            "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
+  dispatch:
+    needs: main
+    runs-on: ubuntu-latest
+    env:
+      DISPATCH_TOKEN: ${{ secrets.CBA_DISPATCH_TOKEN }}
+    steps:
+      - name: Notify BoardManagerFiles
+        if: env.DISPATCH_TOKEN != ''
+        run: |
+          curl -sSf -X POST \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/ClangBuiltArduino/BoardManagerFiles/dispatches \
+            -d '{"event_type":"tc-build-release","client_payload":{"channel":"${{ env.NIGHTLY == '1' && 'nightly' || 'stable' }}"}}'
