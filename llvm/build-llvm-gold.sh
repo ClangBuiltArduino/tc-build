@@ -191,7 +191,7 @@ cmake -G "Ninja" \
     -Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
     "${COMPILER_ARGS[@]}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
-    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -stdlib=libc++")" \
+    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux && ${CROSS_BUILD:-0} -eq 0 ]] && echo " -stdlib=libc++")" \
     -DCMAKE_EXE_LINKER_FLAGS="$([[ $(uname -s) == Linux ]] && echo -static) ${COMMON_LDFLAGS[*]}" \
     -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
