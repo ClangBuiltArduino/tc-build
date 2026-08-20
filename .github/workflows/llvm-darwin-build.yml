@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       nightly:
-        description: 'Build from upstream git HEAD and publish as nightly packages'
+        description: "Build from upstream git HEAD and publish as nightly packages"
         type: boolean
         default: false
   # Scheduled runs are always nightly builds (offset from the other pipelines).
   schedule:
-    - cron: '30 2 * * *'
+    - cron: "30 2 * * *"
 
 # Serialize runs: pipelines publish releases.
 concurrency:
@@ -32,9 +32,11 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          for tool in ccache zstd; do
-            command -v "$tool" >/dev/null 2>&1 || brew install "$tool"
+          for tool in ccache zstd llvm; do
+            brew list "$tool" >/dev/null 2>&1 || brew install "$tool"
           done
+          # brew's llvm is keg-only; put it on PATH for lld and friends.
+          echo "/usr/local/opt/llvm/bin" >> "$GITHUB_PATH"
 
       # Native two-stage build reusing the local build scripts.
       - name: Build LLVM toolchain

@@ -27,11 +27,13 @@ WORKDIR /
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
+COPY /common/cross-mingw-i686.cmake /
 RUN apt-get update -y
 RUN apt-get install cmake ninja-build zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 -y
 ENV CC=i686-w64-mingw32-gcc-posix
 ENV CXX=i686-w64-mingw32-g++-posix
 ENV LD=i686-w64-mingw32-ld
+ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake
 RUN bash build-deps.sh
 
 ###############

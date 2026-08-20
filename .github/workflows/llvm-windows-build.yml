@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       nightly:
-        description: 'Build from upstream git HEAD and publish as nightly packages'
+        description: "Build from upstream git HEAD and publish as nightly packages"
         type: boolean
         default: false
   # Scheduled runs are always nightly builds (offset from the Linux pipeline).
   schedule:
-    - cron: '15 0 * * *'
+    - cron: "15 0 * * *"
 
 # Serialize runs: pipelines publish releases and GHCR images.
 concurrency:

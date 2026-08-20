@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       nightly:
-        description: 'Build from upstream git HEAD and publish as nightly packages'
+        description: "Build from upstream git HEAD and publish as nightly packages"
         type: boolean
         default: false
       hosts:
-        description: 'Which host architectures to build'
+        description: "Which host architectures to build"
         type: choice
         options: [all, amd64, aarch64]
         default: all
   # Scheduled runs are always nightly builds
   schedule:
-    - cron: '0 0 * * *'
+    - cron: "0 0 * * *"
 
 # Serialize runs: pipelines publish releases and GHCR images.
 concurrency:

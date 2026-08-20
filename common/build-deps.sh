@@ -27,6 +27,13 @@ fi
 
 # Versions come from utils.sh (via versions.conf)
 
+# Cross builds get the cmake toolchain file so try_compile checks work; native
+# builds keep using the host compiler directly.
+TOOLCHAIN_ARGS=()
+if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+    TOOLCHAIN_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+fi
+
 # Prepare environment
 prep_env
 
@@ -41,6 +48,7 @@ ZSTD_SDIR="${SOURCE_DIR}/zstd-${ZSTD_VERSION}"
 # Build zlib
 init_build_dir "${BUILD_DIR}/zlib"
 cmake -G Ninja \
+    "${TOOLCHAIN_ARGS[@]}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zlib" \
@@ -61,6 +69,7 @@ ninja install
 # Build zstd
 init_build_dir "${BUILD_DIR}/zstd"
 cmake -G Ninja \
+    "${TOOLCHAIN_ARGS[@]}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zstd" \
