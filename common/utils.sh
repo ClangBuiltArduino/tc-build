@@ -47,8 +47,22 @@ INSTALL_DIR="${CURR_DIR}/install"
 export COMMON_FLAGS=("-ffunction-sections"
     "-fdata-sections"
     "-pipe")
-export COMMON_LDFLAGS=("-Wl,--gc-sections"
-    "-Wl,--strip-debug")
+if [[ $(uname -s) == "Darwin" ]]; then
+    export COMMON_LDFLAGS=("-Wl,-dead_strip")
+else
+    export COMMON_LDFLAGS=("-Wl,--gc-sections"
+        "-Wl,--strip-debug")
+fi
+
+# Portable CPU count (GNU nproc is Linux-only).
+ncpus() {
+    nproc --all 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2
+}
+
+# True when the current libc is musl (never true on macOS/Windows crosses).
+is_musl() {
+    ldd --version 2>&1 | grep -qi musl
+}
 
 # Helpful utility functions
 prep_env() {
@@ -71,7 +85,11 @@ get_tar() {
             echo "Using existing file: $2" >&2
         else
             echo "Downloading from $1 as $2 ..." >&2
-            wget -O"$2" "$1"
+            if command -v wget >/dev/null 2>&1; then
+                wget -O"$2" "$1"
+            else
+                curl -fL --retry 3 -o "$2" "$1"
+            fi
         fi
         echo "Extracting $2 into $extract_dir ..." >&2
         mkdir "$extract_dir"

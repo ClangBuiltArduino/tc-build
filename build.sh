@@ -52,7 +52,7 @@ check_deps() {
     local missing=0
     echo -e "${CYAN}Checking build dependencies...${NC}"
 
-    for cmd in clang clang++ lld cmake ninja make wget bsdtar; do
+    for cmd in clang clang++ lld cmake ninja make curl bsdtar; do
         if ! command -v "$cmd" &>/dev/null; then
             echo -e "  ${RED}✗${NC} $cmd"
             missing=1

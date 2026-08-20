@@ -29,14 +29,14 @@ cd "${SOURCE_DIR}"
 LLVM_SDIR="$(get_llvm_source)"
 
 # Detect if host has musl or glibc for configuring
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+if is_musl; then
     HAS_MUSL_LIBC="ON"
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608") # 8MB stack size
     echo "Building for musl libc"
 else
     HAS_MUSL_LIBC="OFF"
-    echo "Building for glibc"
+    echo "Building for glibc/system libc"
 fi
 
 # Build stage1
@@ -104,18 +104,20 @@ cmake -G "Ninja" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
-    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
-    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(ncpus)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(ncpus)" \
     "${LLVM_SDIR}/llvm"
 
 ninja
 rm -rf "${INSTALL_DIR}/stage1"
 ninja install
 
-# Create symlinks for libc++ and friends
-cd "$INSTALL_DIR/stage1/lib"
-for library in libc++abi.so.1 libc++.a libc++abi.a libc++.so.1 libunwind.so.1 libunwind.a; do
-    ln -sv "${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/${library}" .
-done
+# Create symlinks for libc++ and friends (Linux per-arch libdir layout)
+if [[ $(uname -s) == "Linux" ]]; then
+    cd "$INSTALL_DIR/stage1/lib"
+    for library in libc++abi.so.1 libc++.a libc++abi.a libc++.so.1 libunwind.so.1 libunwind.a; do
+        ln -sv "${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/${library}" .
+    done
+fi
 
 echo "LLVM stage1 build completed successfully!"

@@ -20,7 +20,7 @@ set -euo pipefail
 
 COMMON_FLAGS+=("-O2" "-fPIC")
 
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
 fi
@@ -44,9 +44,9 @@ cmake -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zlib" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_LINKER=lld \
+    -DCMAKE_C_COMPILER="${CC:-clang}" \
+    -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
+    -DCMAKE_LINKER="${LD:-lld}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
@@ -54,7 +54,7 @@ cmake -G Ninja \
     -DWITH_GTEST=OFF \
     "${ZLIB_SDIR}"
 
-ninja -j"$(nproc --all)"
+ninja -j"$(ncpus)"
 rm -rf "${INSTALL_DIR}/zlib"
 ninja install
 
@@ -64,9 +64,9 @@ cmake -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zstd" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_LINKER=lld \
+    -DCMAKE_C_COMPILER="${CC:-clang}" \
+    -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
+    -DCMAKE_LINKER="${LD:-lld}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
@@ -77,6 +77,6 @@ cmake -G Ninja \
     -DZSTD_MULTITHREAD_SUPPORT=ON \
     "${ZSTD_SDIR}/build/cmake"
 
-ninja -j"$(nproc --all)"
+ninja -j"$(ncpus)"
 rm -rf "${INSTALL_DIR}/zstd"
 ninja install

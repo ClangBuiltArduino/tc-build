@@ -48,7 +48,7 @@ export CXXFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
     --enable-newlib-register-fini \
     --enable-newlib-retargetable-locking
 
-make -j"$(nproc --all)"
+make -j"$(ncpus)"
 make install
 
 # Build libgcc
@@ -74,8 +74,8 @@ export CXXFLAGS_FOR_TARGET='-Os -ffunction-sections -fdata-sections'
     --enable-static \
     --without-headers
 
-make all-target-libgcc -j"$(nproc --all)"
-make install-target-libgcc -j"$(nproc --all)"
+make all-target-libgcc -j"$(ncpus)"
+make install-target-libgcc -j"$(ncpus)"
 
 # Remove things that we dont need.
 rm -rf "${INSTALL_DIR}/arm-sysroot/share"

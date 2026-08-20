@@ -28,9 +28,20 @@ COMMON_FLAGS+=(
 # Use our static zstd lib to avoid dependency on zstd.
 COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
 
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
+fi
+
+# Cross-building for another host triple (e.g. i686-w64-mingw32) when set.
+CONFIGURE_HOST_ARGS=()
+if [[ -n ${HOST_TRIPLE:-} ]]; then
+    CONFIGURE_HOST_ARGS+=(--host="${HOST_TRIPLE}")
+    export CC="${HOST_TRIPLE}-gcc"
+    export CXX="${HOST_TRIPLE}-g++"
+    STRIP_TOOL="${HOST_TRIPLE}-strip"
+else
+    STRIP_TOOL="strip"
 fi
 
 # Prep env
@@ -71,6 +82,7 @@ export CFLAGS="${COMMON_FLAGS[*]}"
 export CXXFLAGS="${COMMON_FLAGS[*]}"
 export LDFLAGS="${COMMON_LDFLAGS[*]}"
 "${BINUTILS_SDIR}"/configure \
+    "${CONFIGURE_HOST_ARGS[@]}" \
     --prefix="${INSTALL_DIR}/bfd-${TARGET}" \
     --htmldir="${INSTALL_DIR}/deleteme" \
     --infodir="${INSTALL_DIR}/deleteme" \
@@ -96,7 +108,7 @@ export LDFLAGS="${COMMON_LDFLAGS[*]}"
     --with-static-standard-libraries
 
 make configure-host
-make LDFLAGS="${COMMON_LDFLAGS[*]}" tooldir="${INSTALL_DIR}/bfd-${TARGET}" -j"$(nproc --all)"
+make LDFLAGS="${COMMON_LDFLAGS[*]}" tooldir="${INSTALL_DIR}/bfd-${TARGET}" -j"$(ncpus)"
 make install tooldir="${INSTALL_DIR}/bfd-${TARGET}"
 
 # Remove unwanted docs
@@ -109,7 +121,7 @@ else
     rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/ldscripts"
 fi
 
-strip_bins "${INSTALL_DIR}/bfd-${TARGET}" "strip"
+strip_bins "${INSTALL_DIR}/bfd-${TARGET}" "${STRIP_TOOL}"
 
 if [[ $PACK -eq 1 ]]; then
     mkdir -p "${INSTALL_DIR}/install/"

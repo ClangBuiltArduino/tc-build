@@ -21,21 +21,23 @@ set -euo pipefail
 # Set path for using libs from stage 1
 COMMON_LDFLAGS+=(
     "-L${INSTALL_DIR}/stage1/lib"
-    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
+    "-L${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/"
 )
 
-# Set flags for using LLVM stdlibs.
-COMMON_LDFLAGS+=(
-    "-Wl,--as-needed"
-    "-Wl,-Bstatic"
-    "-stdlib=libc++"
-    "--unwindlib=libunwind"
-    "-lc++"
-    "-lc++abi"
-)
+# Static-libc++ link dance is a Linux/glibc-musl concern only.
+if [[ $(uname -s) == "Linux" ]]; then
+    COMMON_LDFLAGS+=(
+        "-Wl,--as-needed"
+        "-Wl,-Bstatic"
+        "-stdlib=libc++"
+        "--unwindlib=libunwind"
+        "-lc++"
+        "-lc++abi"
+    )
+fi
 
 # Detect if host has musl or glibc for configuring
-if ldd --version 2>&1 | grep -qi musl; then
+if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
 fi
@@ -85,7 +87,7 @@ cmake -G "Ninja" \
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF \
     -DLLVM_LINK_LLVM_DYLIB=OFF \
-    -DLLVM_STATIC_LINK_CXX_STDLIB=ON \
+    -DLLVM_STATIC_LINK_CXX_STDLIB="$([[ $(uname -s) == Darwin ]] && echo OFF || echo ON)" \
     -DLLVM_TOOL_BUGPOINT_BUILD=OFF \
     -DLLVM_TOOL_BUGPOINT_PASSES_BUILD=OFF \
     -DLLVM_TOOL_DSYMUTIL_BUILD=OFF \
@@ -176,12 +178,12 @@ cmake -G "Ninja" \
     -DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang" \
     -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
-    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]} -stdlib=libc++" \
-    -DCMAKE_EXE_LINKER_FLAGS="-static ${COMMON_LDFLAGS[*]}" \
-    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
-    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
-    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
+    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -stdlib=libc++")" \
+    -DCMAKE_EXE_LINKER_FLAGS="$([[ $(uname -s) == Linux ]] && echo -static) ${COMMON_LDFLAGS[*]}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(ncpus)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(ncpus)" \
     "${LLVM_SDIR}/llvm"
 
 ninja distribution

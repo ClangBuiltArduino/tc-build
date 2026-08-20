@@ -28,53 +28,53 @@ PKG_USE_ZIP=0
 PKG_NIGHTLY=0
 for arg in "$@"; do
     case "${arg}" in
-        "--gz-tar")
-            PKG_USE_GZ=1
-            ;;
-        "--zstd-tar")
-            PKG_USE_ZSTD=1
-            ;;
-        "--zip")
-            PKG_USE_ZIP=1
-            ;;
-        "--nightly")
-            PKG_NIGHTLY=1
-            ;;
-        "--llvm-tc")
-            DIR_NAME="cba-llvm-${LLVM_VERSION}-${PKG_DATE}"
-            PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
-            ARTIFACT="llvm"
-            ;;
-        "--llvm-gold")
-            DIR_NAME="cba-llvm-gold-${LLVM_VERSION}-${PKG_DATE}"
-            PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
-            ARTIFACT="llvm-gold"
-            ;;
-        "--bfd")
-            DIR_NAME="bfd-avr-${BINUTILS_VERSION}-${PKG_DATE}"
-            PKG_TAG="bfd-${BINUTILS_VERSION}-${PKG_DATE}"
-            ARTIFACT="bfd"
-            ;;
-        "--sysroot"*)
-            PKG_SYSROOT_TARGET="${arg#*--sysroot}"
-            PKG_SYSROOT_TARGET=${PKG_SYSROOT_TARGET:1}
-            DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
-            PKG_TAG="sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
-            ARTIFACT="sysroot"
-            CROSS_PKG=1
-            ;;
-        "--pkg-arch"*)
-            PKG_ARCH="${arg#*--pkg-arch}"
-            PKG_ARCH=${PKG_ARCH:1}
-            ;;
-        "--pkg-os"*)
-            PKG_OS="${arg#*--pkg-os}"
-            PKG_OS=${PKG_OS:1}
-            ;;
-        *)
-            echo "Invalid argument passed: ${arg}"
-            exit 1
-            ;;
+    "--gz-tar")
+        PKG_USE_GZ=1
+        ;;
+    "--zstd-tar")
+        PKG_USE_ZSTD=1
+        ;;
+    "--zip")
+        PKG_USE_ZIP=1
+        ;;
+    "--nightly")
+        PKG_NIGHTLY=1
+        ;;
+    "--llvm-tc")
+        DIR_NAME="cba-llvm-${LLVM_VERSION}-${PKG_DATE}"
+        PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
+        ARTIFACT="llvm"
+        ;;
+    "--llvm-gold")
+        DIR_NAME="cba-llvm-gold-${LLVM_VERSION}-${PKG_DATE}"
+        PKG_TAG="llvm-${LLVM_VERSION}-${PKG_DATE}"
+        ARTIFACT="llvm-gold"
+        ;;
+    "--bfd")
+        DIR_NAME="bfd-avr-${BINUTILS_VERSION}-${PKG_DATE}"
+        PKG_TAG="bfd-${BINUTILS_VERSION}-${PKG_DATE}"
+        ARTIFACT="bfd"
+        ;;
+    "--sysroot"*)
+        PKG_SYSROOT_TARGET="${arg#*--sysroot}"
+        PKG_SYSROOT_TARGET=${PKG_SYSROOT_TARGET:1}
+        DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
+        PKG_TAG="sysroot-${PKG_SYSROOT_TARGET}-${PKG_DATE}"
+        ARTIFACT="sysroot"
+        CROSS_PKG=1
+        ;;
+    "--pkg-arch"*)
+        PKG_ARCH="${arg#*--pkg-arch}"
+        PKG_ARCH=${PKG_ARCH:1}
+        ;;
+    "--pkg-os"*)
+        PKG_OS="${arg#*--pkg-os}"
+        PKG_OS=${PKG_OS:1}
+        ;;
+    *)
+        echo "Invalid argument passed: ${arg}"
+        exit 1
+        ;;
     esac
 done
 
@@ -85,18 +85,18 @@ done
 if [[ ${PKG_NIGHTLY} -eq 1 ]]; then
     PKG_TAG="nightly"
     case "${ARTIFACT}" in
-        llvm)
-            DIR_NAME="cba-llvm-nightly"
-            ;;
-        llvm-gold)
-            DIR_NAME="cba-llvm-gold-nightly"
-            ;;
-        bfd)
-            DIR_NAME="bfd-avr-nightly"
-            ;;
-        sysroot)
-            DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-nightly"
-            ;;
+    llvm)
+        DIR_NAME="cba-llvm-nightly"
+        ;;
+    llvm-gold)
+        DIR_NAME="cba-llvm-gold-nightly"
+        ;;
+    bfd)
+        DIR_NAME="bfd-avr-nightly"
+        ;;
+    sysroot)
+        DIR_NAME="cba-sysroot-${PKG_SYSROOT_TARGET}-nightly"
+        ;;
     esac
 fi
 
@@ -112,7 +112,7 @@ mv "install" "${DIR_NAME}"
 
 # Create zstd archive
 if [[ $PKG_USE_ZSTD -eq 1 ]]; then
-    tar -I "zstd -T$(nproc --all) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
+    tar -I "zstd -T$(ncpus) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
 fi
 
 # Create gzip archive
