@@ -52,6 +52,19 @@ A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is include
 2. **Sysroot** - Target libraries (avr-libc/newlib + libgcc)
 3. **BFD Linker** - Optional GNU linker for AVR
 
+### Host coverage
+
+| Host | LLVM + gold | BFD | How |
+|------|-------------|-----|-----|
+| `x86_64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | alpine/debian containers on x86 runners |
+| `aarch64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | same containers, native on `ubuntu-24.04-arm` runners |
+| `i686-mingw32` | single-stage mingw-w64 cross | mingw cross | `llvm-windows-i686.Dockerfile` |
+| `x86_64-apple-darwin12` | native, 2-stage | native | `llvm-darwin-build.yml` on `macos-15-intel` runners |
+
+The sysroot is host-independent (AVR target libraries, one `-any` archive).
+Linux archives ship musl/glibc variants side by side; `clang-wrapper` picks
+the right one at runtime. Windows/macOS archives are flat.
+
 ### Channels
 
 Packages are published as GitHub releases in two flavors:
