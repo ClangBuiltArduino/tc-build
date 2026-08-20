@@ -2,10 +2,38 @@ name: AVR bfd Build Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      hosts:
+        description: 'Which host architectures to build'
+        type: choice
+        options: [all, amd64, aarch64]
+        default: all
 
 jobs:
-  main:
+  resolve:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          HOSTS: ${{ inputs.hosts }}
+        run: |
+          case "${HOSTS:-all}" in
+            amd64)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"}]}' >> "$GITHUB_OUTPUT" ;;
+            aarch64)
+              echo 'matrix={"include":[{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"},{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  main:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
     permissions:
       contents: write
       packages: write
@@ -24,9 +52,11 @@ jobs:
         with:
           context: .
           target: packing
-          file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
+          file: dockerfiles/bfd/avr-linux.Dockerfile
           push: false
-          tags: ghcr.io/clangbuiltarduino/avr-bfd-amd64-linux:${{ github.sha }}
+          tags: ghcr.io/clangbuiltarduino/avr-bfd-${{ matrix.arch }}-linux:${{ github.sha }}
+          build-args: |
+            PKG_ARCH=${{ matrix.arch }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
 

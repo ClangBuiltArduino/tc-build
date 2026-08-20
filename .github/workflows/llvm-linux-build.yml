@@ -7,6 +7,11 @@ on:
         description: 'Build from upstream git HEAD and publish as nightly packages'
         type: boolean
         default: false
+      hosts:
+        description: 'Which host architectures to build'
+        type: choice
+        options: [all, amd64, aarch64]
+        default: all
   # Scheduled runs are always nightly builds
   schedule:
     - cron: '0 0 * * *'
@@ -18,12 +23,35 @@ concurrency:
 
 env:
   PROJECT: llvm
-  PLATFORM: amd64-linux
   NIGHTLY: ${{ (github.event_name == 'schedule' || inputs.nightly) && '1' || '0' }}
 
 jobs:
-  deps:
+  resolve:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          HOSTS: ${{ inputs.hosts }}
+        run: |
+          case "${HOSTS:-all}" in
+            amd64)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"}]}' >> "$GITHUB_OUTPUT" ;;
+            aarch64)
+              echo 'matrix={"include":[{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"},{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  deps:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -36,13 +64,19 @@ jobs:
           target: deps-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
           tags: deps:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   deps-glibc:
-    runs-on: ubuntu-latest
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -55,14 +89,19 @@ jobs:
           target: deps-glibc-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
           tags: deps-glibc:${{ github.sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1:
-    needs: deps
-    runs-on: ubuntu-latest
+    needs: [resolve, deps]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -75,7 +114,7 @@ jobs:
           target: stage1-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
           tags: stage1:${{ github.sha }}
           build-args: |
@@ -84,8 +123,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1-glibc:
-    needs: deps-glibc
-    runs-on: ubuntu-latest
+    needs: [resolve, deps-glibc]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -98,7 +142,7 @@ jobs:
           target: stage1-glibc-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
           tags: stage1-glibc:${{ github.sha }}
           build-args: |
@@ -107,8 +151,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage2:
-    needs: stage1
-    runs-on: ubuntu-latest
+    needs: [resolve, stage1]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -121,7 +170,7 @@ jobs:
           target: stage2-local
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
           tags: stage2:${{ github.sha }}
           build-args: |
@@ -130,8 +179,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   extra-pushllvm:
-    needs: stage2
-    runs-on: ubuntu-latest
+    needs: [resolve, stage2]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: write
       packages: write
@@ -144,19 +198,25 @@ jobs:
           target: extrabuild
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/llvm-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: false
           tags: extrabuild:${{ github.sha }}
           build-args: |
             STAGE2_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage2:${{ github.sha }}
             NIGHTLY=${{ env.NIGHTLY }}
+            PKG_ARCH=${{ matrix.arch }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
           token: ${{ secrets.GITHUB_TOKEN }}
 
   llvmgold-musl:
-    needs: stage1
-    runs-on: ubuntu-latest
+    needs: [resolve, stage1]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -169,7 +229,7 @@ jobs:
           target: llvmgold-musl-local
           project: llvmgold
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
           tags: final-musl:${{ github.sha }}
           build-args: |
@@ -178,8 +238,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   llvmgold-glibc:
-    needs: stage1-glibc
-    runs-on: ubuntu-latest
+    needs: [resolve, stage1-glibc]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: read
       packages: write
@@ -192,7 +257,7 @@ jobs:
           target: llvmgold-glibc-local
           project: llvmgold
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
           tags: final-glibc:${{ github.sha }}
           build-args: |
@@ -201,8 +266,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
   packaging-llvmgold:
-    needs: [llvmgold-glibc, llvmgold-musl]
-    runs-on: ubuntu-latest
+    needs: [resolve, llvmgold-glibc, llvmgold-musl]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
+    env:
+      PLATFORM: ${{ matrix.arch }}-linux
     permissions:
       contents: write
       packages: write
@@ -215,13 +285,14 @@ jobs:
           target: packing
           project: ${{ env.PROJECT }}
           host: ${{ env.PLATFORM }}
-          file: dockerfiles/llvm/LLVMgold-linux-amd64.Dockerfile
+          file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: false
           tags: packing:${{ github.sha }}
           build-args: |
             FINAL_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-glibc:${{ github.sha }}
             FINAL_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-musl:${{ github.sha }}
             NIGHTLY=${{ env.NIGHTLY }}
+            PKG_ARCH=${{ matrix.arch }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
           token: ${{ secrets.GITHUB_TOKEN }}

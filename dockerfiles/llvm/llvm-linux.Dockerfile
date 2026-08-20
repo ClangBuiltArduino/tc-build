@@ -79,6 +79,7 @@ RUN rm -rf /source && rm -rf /build
 FROM ${STAGE2_IMAGE} AS stage2
 FROM alpine:edge AS extrabuild
 ARG NIGHTLY=0
+ARG PKG_ARCH=amd64
 WORKDIR /
 COPY --from=stage2 /install/install ./install/install
 COPY --from=stage2 /install/stage1 ./install/stage1
@@ -91,4 +92,4 @@ RUN apk add bash zstd coreutils gzip tar xz patchelf git go github-cli make file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
 RUN bash build-extra.sh
-RUN bash push-build.sh --gz-tar --zstd-tar --llvm-tc --pkg-arch="amd64" --pkg-os="linux" $([ "${NIGHTLY:-0}" = "1" ] && echo --nightly)
+RUN bash push-build.sh --gz-tar --zstd-tar --llvm-tc --pkg-arch="${PKG_ARCH}" --pkg-os="linux" $([ "${NIGHTLY:-0}" = "1" ] && echo --nightly)
