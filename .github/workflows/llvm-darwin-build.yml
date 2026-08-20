@@ -35,8 +35,10 @@ jobs:
           for tool in ccache zstd llvm; do
             brew list "$tool" >/dev/null 2>&1 || brew install "$tool"
           done
-          # brew's llvm is keg-only; put it on PATH for lld and friends.
-          echo "/usr/local/opt/llvm/bin" >> "$GITHUB_PATH"
+          # brew's llvm is keg-only; link lld into a directory already on PATH.
+          LLVM_PREFIX="$(brew --prefix llvm)"
+          ln -sf "${LLVM_PREFIX}/bin/lld" /usr/local/bin/lld
+          lld --version
 
       # Native two-stage build reusing the local build scripts.
       - name: Build LLVM toolchain

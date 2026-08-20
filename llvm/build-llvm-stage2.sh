@@ -18,30 +18,34 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# Set flags for static linking
-COMMON_FLAGS+=("-static")
-COMMON_LDFLAGS+=(
-	"-static"
-)
+# Static linking against stage1's libc++ is a native-build concern; cross
+# builds (CROSS_TOOLCHAIN_FILE set) link against the target's own runtime.
+if [[ -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+	# Set flags for static linking
+	COMMON_FLAGS+=("-static")
+	COMMON_LDFLAGS+=(
+		"-static"
+	)
 
-# Set flags to use libs from stage1.
-COMMON_LDFLAGS+=(
-	"-L${INSTALL_DIR}/stage1/lib"
-	"-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
-)
+	# Set flags to use libs from stage1.
+	COMMON_LDFLAGS+=(
+		"-L${INSTALL_DIR}/stage1/lib"
+		"-L${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/"
+	)
 
-# Set flags for using LLVM stdlibs.
-COMMON_LDFLAGS+=(
-	"-Wl,--as-needed"
-	"-Wl,-Bstatic"
-	"-stdlib=libc++"
-	"--unwindlib=libunwind"
-	"-lc++"
-	"-lc++abi"
-)
+	# Set flags for using LLVM stdlibs.
+	COMMON_LDFLAGS+=(
+		"-Wl,--as-needed"
+		"-Wl,-Bstatic"
+		"-stdlib=libc++"
+		"--unwindlib=libunwind"
+		"-lc++"
+		"-lc++abi"
+	)
+fi
 
-# Detect if host has musl or glibc for configuring
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+# Detect if host has musl for the larger-thread-stack workaround.
+if is_musl; then
 	# https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
 	COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608") # 8MB stack size
 fi
