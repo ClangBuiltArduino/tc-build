@@ -82,7 +82,7 @@ export CFLAGS="${COMMON_FLAGS[*]}"
 export CXXFLAGS="${COMMON_FLAGS[*]}"
 export LDFLAGS="${COMMON_LDFLAGS[*]}"
 "${BINUTILS_SDIR}"/configure \
-    "${CONFIGURE_HOST_ARGS[@]}" \
+    "${CONFIGURE_HOST_ARGS[@]+"${CONFIGURE_HOST_ARGS[@]}"}" \
     --prefix="${INSTALL_DIR}/bfd-${TARGET}" \
     --htmldir="${INSTALL_DIR}/deleteme" \
     --infodir="${INSTALL_DIR}/deleteme" \

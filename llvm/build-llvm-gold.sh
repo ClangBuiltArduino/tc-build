@@ -34,8 +34,9 @@ else
     )
 fi
 
-# Static-libc++ link dance is a Linux/glibc-musl concern only.
-if [[ $(uname -s) == "Linux" ]]; then
+# Static-libc++ link dance is a native Linux/glibc-musl concern only; cross
+# containers are Linux too but link against the target runtime.
+if [[ $(uname -s) == "Linux" && ${CROSS_BUILD:-0} -eq 0 ]]; then
     COMMON_LDFLAGS+=(
         "-Wl,--as-needed"
         "-Wl,-Bstatic"

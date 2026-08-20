@@ -53,7 +53,7 @@ ZSTD_SDIR="${SOURCE_DIR}/zstd-${ZSTD_VERSION}"
 # Build zlib
 init_build_dir "${BUILD_DIR}/zlib"
 cmake -G Ninja \
-    "${TOOLCHAIN_ARGS[@]}" \
+    "${TOOLCHAIN_ARGS[@]+"${TOOLCHAIN_ARGS[@]}"}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zlib" \
@@ -74,7 +74,7 @@ ninja install
 # Build zstd
 init_build_dir "${BUILD_DIR}/zstd"
 cmake -G Ninja \
-    "${TOOLCHAIN_ARGS[@]}" \
+    "${TOOLCHAIN_ARGS[@]+"${TOOLCHAIN_ARGS[@]}"}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zstd" \
@@ -89,7 +89,7 @@ cmake -G Ninja \
     -DZSTD_BUILD_SHARED=OFF \
     -DZSTD_BUILD_STATIC=ON \
     -DZSTD_MULTITHREAD_SUPPORT=ON \
-    "${ZSTD_CROSS_ARGS[@]}" \
+    "${ZSTD_CROSS_ARGS[@]+"${ZSTD_CROSS_ARGS[@]}"}" \
     "${ZSTD_SDIR}/build/cmake"
 
 ninja -j"$(ncpus)"
