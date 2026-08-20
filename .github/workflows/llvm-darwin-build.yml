@@ -32,16 +32,12 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          for tool in ccache zstd llvm; do
+          # Homebrew ships lld as its own formula (the llvm bottle no longer
+          # contains it); both are needed by the build scripts.
+          for tool in ccache zstd llvm lld; do
             brew list "$tool" >/dev/null 2>&1 || brew install "$tool"
           done
-          # brew's llvm is keg-only; link lld into a directory already on PATH.
-          LLVM_PREFIX="$(brew --prefix llvm)"
-          echo "brew prefix: ${LLVM_PREFIX}"
-          find "${LLVM_PREFIX}/bin" -maxdepth 1 -name 'l*' -type f | head -20
-          test -x "${LLVM_PREFIX}/bin/lld"
-          sudo ln -sf "${LLVM_PREFIX}/bin/lld" /usr/local/bin/lld
-          echo "PATH=${PATH}"
+          command -v lld || sudo ln -sf "$(brew --prefix llvm)/bin/lld" /usr/local/bin/lld
           lld --version
 
       # Native two-stage build reusing the local build scripts.
