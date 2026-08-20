@@ -38,7 +38,8 @@ jobs:
             brew list "$tool" >/dev/null 2>&1 || brew install "$tool"
           done
           command -v lld || sudo ln -sf "$(brew --prefix llvm)/bin/lld" /usr/local/bin/lld
-          lld --version
+          # Plain 'lld' prints usage and exits non-zero; check via the driver.
+          ld.lld --version
 
       # Native two-stage build reusing the local build scripts.
       - name: Build LLVM toolchain
