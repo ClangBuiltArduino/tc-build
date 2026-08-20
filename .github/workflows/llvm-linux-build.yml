@@ -66,7 +66,7 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
-          tags: deps:${{ github.sha }}
+          tags: deps:${{ github.sha }}-n${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   deps-glibc:
@@ -91,7 +91,7 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
-          tags: deps-glibc:${{ github.sha }}
+          tags: deps-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   stage1:
@@ -116,9 +116,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
-          tags: stage1:${{ github.sha }}
+          tags: stage1:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            DEPS_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps:${{ github.sha }}
+            DEPS_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -144,9 +144,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
-          tags: stage1-glibc:${{ github.sha }}
+          tags: stage1-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            DEPS_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps-glibc:${{ github.sha }}
+            DEPS_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-deps-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -172,9 +172,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: true
-          tags: stage2:${{ github.sha }}
+          tags: stage2:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            STAGE1_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1:${{ github.sha }}
+            STAGE1_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -200,9 +200,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/llvm-linux.Dockerfile
           push: false
-          tags: extrabuild:${{ github.sha }}
+          tags: extrabuild:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            STAGE2_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage2:${{ github.sha }}
+            STAGE2_IMAGE=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage2:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
             PKG_ARCH=${{ matrix.arch }}
           secrets: |
@@ -231,9 +231,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
-          tags: final-musl:${{ github.sha }}
+          tags: final-musl:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            STAGE1_IMAGE_MUSL=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1:${{ github.sha }}
+            STAGE1_IMAGE_MUSL=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -259,9 +259,9 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: true
-          tags: final-glibc:${{ github.sha }}
+          tags: final-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            STAGE1_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1-glibc:${{ github.sha }}
+            STAGE1_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/${{ env.PROJECT }}-${{ env.PLATFORM }}-stage1-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -287,10 +287,10 @@ jobs:
           host: ${{ env.PLATFORM }}
           file: dockerfiles/llvm/LLVMgold-linux.Dockerfile
           push: false
-          tags: packing:${{ github.sha }}
+          tags: packing:${{ github.sha }}-n${{ env.NIGHTLY }}
           build-args: |
-            FINAL_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-glibc:${{ github.sha }}
-            FINAL_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-musl:${{ github.sha }}
+            FINAL_IMAGE_GLIBC=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-glibc:${{ github.sha }}-n${{ env.NIGHTLY }}
+            FINAL_IMAGE_MUSL=ghcr.io/clangbuiltarduino/llvmgold-${{ env.PLATFORM }}-final-musl:${{ github.sha }}-n${{ env.NIGHTLY }}
             NIGHTLY=${{ env.NIGHTLY }}
             PKG_ARCH=${{ matrix.arch }}
           secrets: |
