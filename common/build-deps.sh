@@ -30,8 +30,13 @@ fi
 # Cross builds get the cmake toolchain file so try_compile checks work; native
 # builds keep using the host compiler directly.
 TOOLCHAIN_ARGS=()
+ZSTD_CROSS_ARGS=()
 if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
     TOOLCHAIN_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+    # zstd's contrib/gen_html is a build-time host tool; cross-compiling it
+    # produces a target binary that cmake then tries to run. We only need
+    # libzstd.a, so skip contrib/programs entirely in cross mode.
+    ZSTD_CROSS_ARGS+=(-DZSTD_BUILD_CONTRIB=OFF -DZSTD_BUILD_PROGRAMS=OFF)
 fi
 
 # Prepare environment
@@ -79,11 +84,12 @@ cmake -G Ninja \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
-    -DZSTD_BUILD_TESTS=OFF \
+  	-DZSTD_BUILD_TESTS=OFF \
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_SHARED=OFF \
     -DZSTD_BUILD_STATIC=ON \
     -DZSTD_MULTITHREAD_SUPPORT=ON \
+    "${ZSTD_CROSS_ARGS[@]}" \
     "${ZSTD_SDIR}/build/cmake"
 
 ninja -j"$(ncpus)"
