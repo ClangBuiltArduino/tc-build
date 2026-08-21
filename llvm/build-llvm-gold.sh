@@ -74,6 +74,17 @@ if [[ ${CROSS_BUILD} -eq 0 ]]; then
     export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
 fi
 
+# macOS's libtool (from Xcode) predates our stage1 clang and can't parse its
+# object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
+STATIC_LIB_ARGS=()
+if [[ $(uname -s) == "Darwin" ]]; then
+    STATIC_LIB_ARGS=(
+        "-DCMAKE_AR=${INSTALL_DIR}/stage1/bin/llvm-ar"
+        "-DCMAKE_C_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+    )
+fi
+
 # Build gold plugin
 init_build_dir "${BUILD_DIR}/llvmgold"
 cmake -G "Ninja" \
@@ -194,6 +205,7 @@ cmake -G "Ninja" \
     -Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
     -Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
     "${COMPILER_ARGS[@]}" \
+    "${STATIC_LIB_ARGS[@]}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux && ${CROSS_BUILD:-0} -eq 0 ]] && echo " -stdlib=libc++")" \
     -DCMAKE_EXE_LINKER_FLAGS="$([[ $(uname -s) == Linux ]] && echo -static) ${COMMON_LDFLAGS[*]}" \

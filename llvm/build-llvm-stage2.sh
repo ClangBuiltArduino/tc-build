@@ -78,6 +78,17 @@ else
 	CROSS_BUILD=0
 fi
 
+# macOS's libtool (from Xcode) predates our stage2 clang and can't parse its
+# object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
+STATIC_LIB_ARGS=()
+if [[ $(uname -s) == "Darwin" ]]; then
+    STATIC_LIB_ARGS=(
+        "-DCMAKE_AR=${INSTALL_DIR}/stage1/bin/llvm-ar"
+        "-DCMAKE_C_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+    )
+fi
+
 # Build stage2
 init_build_dir "${BUILD_DIR}/stage2"
 cmake -G "Ninja" \
@@ -126,6 +137,7 @@ cmake -G "Ninja" \
 	-Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
 	-Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
 	"${COMPILER_ARGS[@]}" \
+	"${STATIC_LIB_ARGS[@]}" \
 	-DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
 	-DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ ${CROSS_BUILD} -eq 0 ]] && echo " -stdlib=libc++")" \
 	-DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
