@@ -25,8 +25,13 @@ COMMON_FLAGS+=(
     "-I${INSTALL_DIR}/zstd/include"
 )
 
-# Use our static zstd lib to avoid dependency on zstd.
-COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
+# Use our static zstd lib to avoid dependency on zstd. (-Bstatic is GNU-ld
+# syntax; on macOS the .a is the only candidate so plain -lzstd suffices.)
+if [[ $(uname -s) == "Linux" ]]; then
+    COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
+else
+    COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd")
+fi
 
 if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size

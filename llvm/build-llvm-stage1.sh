@@ -39,6 +39,19 @@ else
     echo "Building for glibc/system libc"
 fi
 
+# Linux needs the LLVM runtimes (static musl libc++) for portability across
+# distros/libcs, and defaults the built clang to compiler-rt/libunwind.
+# macOS ships a stable system libc++, so nothing is built and the clang
+# defaults are left alone -- mirrors how native darwin toolchains are built.
+STAGE1_OS_ARGS=(
+    "-DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi;libunwind"
+    -DCLANG_DEFAULT_RTLIB=compiler-rt
+    -DCLANG_DEFAULT_UNWINDLIB=libunwind
+)
+if [[ $(uname -s) == "Darwin" ]]; then
+    STAGE1_OS_ARGS=("-DLLVM_ENABLE_RUNTIMES=")
+fi
+
 # Build stage1
 init_build_dir "${BUILD_DIR}/stage1"
 cmake -G "Ninja" \
@@ -49,7 +62,7 @@ cmake -G "Ninja" \
     -DLLVM_ENABLE_BINDINGS=OFF \
     -DLLVM_ENABLE_OCAMLDOC=OFF \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
-    -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
+    "${STAGE1_OS_ARGS[@]}" \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_ZLIB=FORCE_ON \
     -DLLVM_ENABLE_ZSTD=FORCE_ON \
@@ -64,8 +77,6 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_LLVM_DRIVER_BUILD=ON \
     -DCLANG_DEFAULT_CXX_STDLIB="libc++" \
     -DCLANG_DEFAULT_OBJCOPY="llvm-objcopy" \
-    -DCLANG_DEFAULT_RTLIB="compiler-rt" \
-    -DCLANG_DEFAULT_UNWINDLIB="libunwind" \
     -DCLANG_ENABLE_ARCMT=OFF \
     -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
     -DCLANG_PLUGIN_SUPPORT=OFF \
