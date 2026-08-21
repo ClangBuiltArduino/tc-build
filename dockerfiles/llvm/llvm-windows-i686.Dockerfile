@@ -102,7 +102,10 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
 RUN apt-get update -y
-RUN apt-get install bash zstd coreutils gzip tar xz-utils git gh file golang-go make -y
+RUN apt-get install bash zstd coreutils gzip tar xz-utils git gh file make curl ca-certificates -y
+# Distro go is too old for clang-wrapper's go.mod; use an upstream toolchain.
+RUN curl -fsSL https://go.dev/dl/go1.24.5.linux-amd64.tar.gz | tar -C /usr/local -xz
+ENV PATH="/usr/local/go/bin:${PATH}"
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
 # LLVM toolchain (with the Go wrapper cross-compiled for windows/386)
