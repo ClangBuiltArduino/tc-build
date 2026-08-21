@@ -55,7 +55,7 @@ A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is include
 ### Host coverage
 
 | Host | LLVM + gold | BFD | How |
-|------|-------------|-----|-----|
+| ------ | ------------- | ----- | ----- |
 | `x86_64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | alpine/debian containers on x86 runners |
 | `aarch64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | same containers, native on `ubuntu-24.04-arm` runners |
 | `i686-mingw32` | single-stage mingw-w64 cross | mingw cross | `llvm-windows-i686.Dockerfile` |
@@ -64,6 +64,17 @@ A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is include
 The sysroot is host-independent (AVR target libraries, one `-any` archive).
 Linux archives ship musl/glibc variants side by side; `clang-wrapper` picks
 the right one at runtime. Windows/macOS archives are flat.
+
+### Portability model per host
+
+- **Linux** hosts span many libcs/distros, so the toolchain is fully
+  **statically linked** (musl libc + libc++) and ships musl/glibc variants
+  where relevant.
+- **Windows (mingw-w64)** relies on the stable mingw ABI; binaries are
+  statically linked and self-contained.
+- **macOS** has a stable ABI, so binaries link **dynamically** against the
+  system libSystem/libc++ and one build covers a range of macOS versions via
+  `MACOSX_DEPLOYMENT_TARGET` (mirrors llvm-mingw's `MACOS_REDIST` builds).
 
 ### Channels
 
