@@ -60,7 +60,10 @@ ncpus() {
 }
 
 # True when the current libc is musl (never true on macOS/Windows crosses).
+# The loader-path check is definitive; 'ldd --version' output varies across
+# busybox/musl versions and architectures.
 is_musl() {
+    [[ -e "/lib/ld-musl-$(uname -m).so.1" ]] && return 0
     ldd --version 2>&1 | grep -qi musl
 }
 

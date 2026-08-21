@@ -18,9 +18,10 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# Static linking against stage1's libc++ is a native-build concern; cross
-# builds (CROSS_TOOLCHAIN_FILE set) link against the target's own runtime.
-if [[ -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+# Static linking against stage1's libc++ is a native Linux concern; cross
+# builds (CROSS_TOOLCHAIN_FILE set) link against the target's own runtime and
+# macOS uses the system libc++ dynamically.
+if [[ $(uname -s) == "Linux" && -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
 	# Set flags for static linking
 	COMMON_FLAGS+=("-static")
 	COMMON_LDFLAGS+=(
@@ -66,14 +67,15 @@ cd -
 # Cross builds (CROSS_TOOLCHAIN_FILE set) use the distro cross compiler in a
 # single stage; native builds use the stage1 bootstrap compiler.
 if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
-    COMPILER_ARGS=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
-    CROSS_BUILD=1
+	COMPILER_ARGS=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+	CROSS_BUILD=1
 else
-    export PATH="$INSTALL_DIR/stage1/bin:$PATH"
-    export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
-    COMPILER_ARGS=(-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang"
-        -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++")
-    CROSS_BUILD=0
+	export PATH="$INSTALL_DIR/stage1/bin:$PATH"
+	[[ $(uname -s) == "Linux" ]] &&
+		export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+	COMPILER_ARGS=(-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang"
+		-DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++")
+	CROSS_BUILD=0
 fi
 
 # Build stage2
@@ -123,7 +125,7 @@ cmake -G "Ninja" \
 	-DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
 	-Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
 	-Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
-    "${COMPILER_ARGS[@]}" \
+	"${COMPILER_ARGS[@]}" \
 	-DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
 	-DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ ${CROSS_BUILD} -eq 0 ]] && echo " -stdlib=libc++")" \
 	-DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
