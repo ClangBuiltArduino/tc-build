@@ -102,11 +102,12 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
 RUN apt-get update -y
-RUN apt-get install bash zstd coreutils gzip tar xz-utils git gh file golang-go -y
+RUN apt-get install bash zstd coreutils gzip tar xz-utils git gh file golang-go make -y
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
 # LLVM toolchain (with the Go wrapper cross-compiled for windows/386)
 COPY /llvm/build-extra.sh ./pkg/llvm/
+COPY /common/utils.sh ./pkg/llvm/
 ENV GOOS=windows
 ENV GOARCH=386
 RUN cd pkg/llvm && bash build-extra.sh

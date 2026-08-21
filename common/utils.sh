@@ -49,6 +49,12 @@ export COMMON_FLAGS=("-ffunction-sections"
     "-pipe")
 if [[ $(uname -s) == "Darwin" ]]; then
     export COMMON_LDFLAGS=("-Wl,-dead_strip")
+    # macOS exposes a stable ABI, so instead of static linking we ship
+    # dynamically-linked binaries and target a range of macOS versions via
+    # the deployment target (mirrors llvm-mingw's MACOS_REDIST builds and
+    # Homebrew). cmake picks this up as the CMAKE_OSX_DEPLOYMENT_TARGET
+    # default; clang/gcc honor it as -mmacosx-version-min.
+    export MACOSX_DEPLOYMENT_TARGET="10.13"
 else
     export COMMON_LDFLAGS=("-Wl,--gc-sections"
         "-Wl,--strip-debug")

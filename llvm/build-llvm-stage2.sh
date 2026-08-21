@@ -92,7 +92,7 @@ cmake -G "Ninja" \
 	-DLLVM_ENABLE_PIC=ON \
 	-DLIBCLANG_BUILD_STATIC=ON \
 	-DLLVM_BUILD_SHARED_LIBS=OFF \
-	-DLLVM_BUILD_STATIC=ON \
+	-DLLVM_BUILD_STATIC="$([[ $(uname -s) == Darwin ]] && echo OFF || echo ON)" \
 	-DLLVM_CCACHE_BUILD=ON \
 	-DLLVM_DISTRIBUTION_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer" \
 	-DLLVM_BUILD_UTILS=OFF \
@@ -110,7 +110,7 @@ cmake -G "Ninja" \
 	-DLLVM_INCLUDE_TESTS=OFF \
 	-DLLVM_INCLUDE_UTILS=OFF \
 	-DLLVM_LINK_LLVM_DYLIB=OFF \
-	-DLLVM_STATIC_LINK_CXX_STDLIB=ON \
+	-DLLVM_STATIC_LINK_CXX_STDLIB="$([[ $(uname -s) == Darwin ]] && echo OFF || echo ON)" \
 	-DLLVM_TOOL_LLVM_DRIVER_BUILD=ON \
 	-DCLANG_BUILD_TOOLS=OFF \
 	-DCLANG_DEFAULT_CXX_STDLIB="libc++" \
