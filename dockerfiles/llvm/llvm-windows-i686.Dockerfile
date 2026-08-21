@@ -47,6 +47,7 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
 COPY /common/cross-mingw-i686.cmake .
+COPY /patches /patches
 RUN apt-get update -y
 RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
 # Reuse stage2's cmake flow in single-stage cross mode. The toolchain file
@@ -67,6 +68,7 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
 COPY /common/cross-mingw-i686.cmake .
+COPY /patches /patches
 RUN apt-get update -y
 RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
 ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake

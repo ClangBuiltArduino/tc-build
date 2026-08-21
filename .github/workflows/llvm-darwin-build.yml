@@ -48,14 +48,13 @@ jobs:
           [ "${NIGHTLY}" = "1" ] && HEAD_FLAG="--head-source"
           ./build.sh llvm ${HEAD_FLAG}
 
-      - name: Dump cmake error logs on failure
+      - name: Dump cmake diagnostics on failure
         if: failure()
         run: |
-          for log in build/stage1/CMakeFiles/CMakeError.log build/stage2/CMakeFiles/CMakeError.log; do
-            if [ -f "$log" ]; then
-              echo "=== $log ==="
-              tail -120 "$log"
-            fi
+          find build -maxdepth 3 \( -name CMakeError.log -o -name CMakeConfigureLog.yaml \) -print |
+          while read -r f; do
+            echo "=== $f ==="
+            tail -200 "$f"
           done
 
       - name: Build BFD linker

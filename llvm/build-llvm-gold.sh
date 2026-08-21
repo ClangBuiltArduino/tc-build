@@ -62,6 +62,9 @@ parse_source_args "$@"
 # Get sources
 cd "${SOURCE_DIR}"
 LLVM_SDIR="$(get_llvm_source)"
+cd "${LLVM_SDIR}"
+apply_llvm_patches
+cd -
 get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
 BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 

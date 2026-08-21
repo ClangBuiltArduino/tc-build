@@ -183,11 +183,27 @@ get_patch() {
 }
 
 apply_llvm_patches() {
-    if [[ -z ${LLVM_PATCHES+x} ]]; then
-        return
+    if [[ -n ${LLVM_PATCHES+x} ]]; then
+        for patch in "${LLVM_PATCHES[@]}"; do
+            get_patch "$patch"
+        done
     fi
 
-    for patch in "${LLVM_PATCHES[@]}"; do
-        get_patch "$patch"
+    # Local patches shipped in tc-build/patches (backports for release builds).
+    # Skipped when already applied (e.g. nightly builds from a newer HEAD).
+    local patch_dir="${SCRIPT_DIR}/../patches"
+    [[ -d ${patch_dir} ]] || return 0
+    local patch
+    for patch in "${patch_dir}"/*.patch; do
+        [[ -e ${patch} ]] || continue
+        if patch -Np1 --dry-run -i "${patch}" >/dev/null 2>&1; then
+            echo "Applying local patch: $(basename "${patch}")"
+            patch -Np1 -i "${patch}"
+        elif patch -Rp1 --dry-run -i "${patch}" >/dev/null 2>&1; then
+            echo "Local patch already applied: $(basename "${patch}")"
+        else
+            echo "ERROR: local patch does not apply: ${patch}" >&2
+            return 1
+        fi
     done
 }
