@@ -17,5 +17,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE BOTH)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
 
 # PE/COFF targets have no rpath; cmake's build-tree rpath relinking is not
-# supported with Ninja for non-ELF platforms.
+# supported with Ninja for non-ELF platforms (LTO shared-lib install error).
 set(CMAKE_SKIP_RPATH ON)
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)

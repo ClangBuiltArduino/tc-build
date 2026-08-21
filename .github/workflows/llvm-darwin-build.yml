@@ -48,6 +48,16 @@ jobs:
           [ "${NIGHTLY}" = "1" ] && HEAD_FLAG="--head-source"
           ./build.sh llvm ${HEAD_FLAG}
 
+      - name: Dump cmake error logs on failure
+        if: failure()
+        run: |
+          for log in build/stage1/CMakeFiles/CMakeError.log build/stage2/CMakeFiles/CMakeError.log; do
+            if [ -f "$log" ]; then
+              echo "=== $log ==="
+              tail -120 "$log"
+            fi
+          done
+
       - name: Build BFD linker
         run: ./build.sh bfd --target=avr --pack-install
 

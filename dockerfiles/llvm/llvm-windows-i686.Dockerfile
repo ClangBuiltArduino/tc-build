@@ -49,10 +49,9 @@ COPY /llvm/build-llvm-stage2.sh .
 COPY /common/cross-mingw-i686.cmake .
 RUN apt-get update -y
 RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
-# Reuse stage2's cmake flow in single-stage cross mode: CC/CXX point at the
-# mingw compilers and the toolchain file describes the Windows host.
-ENV CC=i686-w64-mingw32-gcc-posix
-ENV CXX=i686-w64-mingw32-g++-posix
+# Reuse stage2's cmake flow in single-stage cross mode. The toolchain file
+# names the mingw compilers; no CC/CXX env here -- LLVM's NATIVE tablegen
+# subbuild must pick up the host compiler, not the cross one.
 ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake
 RUN bash build-llvm-stage2.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
@@ -70,8 +69,6 @@ COPY /llvm/build-llvm-gold.sh .
 COPY /common/cross-mingw-i686.cmake .
 RUN apt-get update -y
 RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
-ENV CC=i686-w64-mingw32-gcc-posix
-ENV CXX=i686-w64-mingw32-g++-posix
 ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake
 RUN bash build-llvm-gold.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build

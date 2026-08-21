@@ -106,9 +106,9 @@ parse_source_args() {
 
     for arg in "$@"; do
         case "$arg" in
-            --head-source)
-                SOURCE_MODE="head"
-                ;;
+        --head-source)
+            SOURCE_MODE="head"
+            ;;
         esac
     done
 
