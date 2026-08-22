@@ -207,6 +207,9 @@ apply_llvm_patches() {
             patch -Np1 -i "${patch}"
         elif patch -Rp1 --dry-run -i "${patch}" >/dev/null 2>&1; then
             echo "Local patch already applied: $(basename "${patch}")"
+        elif [[ ${SOURCE_MODE:-release} == "head" ]]; then
+            # Backports are usually superseded upstream; context drifts on HEAD.
+            echo "WARNING: local patch does not apply to HEAD (likely superseded upstream): $(basename "${patch}")"
         else
             echo "ERROR: local patch does not apply: ${patch}" >&2
             return 1

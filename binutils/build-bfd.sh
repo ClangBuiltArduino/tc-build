@@ -19,34 +19,34 @@ source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Inclu
 set -euo pipefail
 
 COMMON_FLAGS+=(
-    "-Os"   # We dont really care about performance of this one program, Lets just save some space.
-    "-flto" # Better DCE.
-    "-fPIC" # Since its dynamically linked.
-    "-I${INSTALL_DIR}/zstd/include"
+        "-Os"   # We dont really care about performance of this one program, Lets just save some space.
+        "-flto" # Better DCE.
+        "-fPIC" # Since its dynamically linked.
+        "-I${INSTALL_DIR}/zstd/include"
 )
 
 # Use our static zstd lib to avoid dependency on zstd. (-Bstatic is GNU-ld
 # syntax; on macOS the .a is the only candidate so plain -lzstd suffices.)
 if [[ $(uname -s) == "Linux" ]]; then
-    COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
+        COMMON_LDFLAGS=("-Bstatic" "-L$INSTALL_DIR/zstd/lib" "-lzstd")
 else
-    COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd")
+        COMMON_LDFLAGS=("-L$INSTALL_DIR/zstd/lib" "-lzstd")
 fi
 
 if is_musl; then
-    # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
-    COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
+        # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
+        COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
 fi
 
 # Cross-building for another host triple (e.g. i686-w64-mingw32) when set.
 CONFIGURE_HOST_ARGS=()
 if [[ -n ${HOST_TRIPLE:-} ]]; then
-    CONFIGURE_HOST_ARGS+=(--host="${HOST_TRIPLE}")
-    export CC="${HOST_TRIPLE}-gcc"
-    export CXX="${HOST_TRIPLE}-g++"
-    STRIP_TOOL="${HOST_TRIPLE}-strip"
+        CONFIGURE_HOST_ARGS+=(--host="${HOST_TRIPLE}")
+        export CC="${HOST_TRIPLE}-gcc"
+        export CXX="${HOST_TRIPLE}-g++"
+        STRIP_TOOL="${HOST_TRIPLE}-strip"
 else
-    STRIP_TOOL="strip"
+        STRIP_TOOL="strip"
 fi
 
 # Prep env
@@ -57,23 +57,23 @@ TARGET=""
 BUILD_LD_SCRIPTS=0
 PACK=0
 for arg in "$@"; do
-    case "${arg}" in
+        case "${arg}" in
         "--target"*)
-            TARGET="${arg#*--target}"
-            TARGET="${TARGET:1}"
-            ;;
+                TARGET="${arg#*--target}"
+                TARGET="${TARGET:1}"
+                ;;
         "--linker-scripts")
-            BUILD_LD_SCRIPTS=1
-            ;;
+                BUILD_LD_SCRIPTS=1
+                ;;
         "--pack-install")
-            PACK=1
-            ;;
-    esac
+                PACK=1
+                ;;
+        esac
 done
 
 if [[ -z $TARGET ]]; then
-    echo "Error: --target option is required." >&2
-    exit 1
+        echo "Error: --target option is required." >&2
+        exit 1
 fi
 
 # Get source
@@ -87,30 +87,30 @@ export CFLAGS="${COMMON_FLAGS[*]}"
 export CXXFLAGS="${COMMON_FLAGS[*]}"
 export LDFLAGS="${COMMON_LDFLAGS[*]}"
 "${BINUTILS_SDIR}"/configure \
-    "${CONFIGURE_HOST_ARGS[@]+"${CONFIGURE_HOST_ARGS[@]}"}" \
-    --prefix="${INSTALL_DIR}/bfd-${TARGET}" \
-    --htmldir="${INSTALL_DIR}/deleteme" \
-    --infodir="${INSTALL_DIR}/deleteme" \
-    --mandir="${INSTALL_DIR}/deleteme" \
-    --pdfdir="${INSTALL_DIR}/deleteme" \
-    --with-bugurl=https://github.com/ClangBuiltArduino/issue-tracker/issues \
-    --disable-binutils \
-    --disable-compressed-debug-sections \
-    --disable-dwp \
-    --disable-gas \
-    --disable-gdb \
-    --disable-gdbserver \
-    --disable-gold \
-    --disable-gprof \
-    --disable-multilib \
-    --disable-werror \
-    --enable-deterministic-archives \
-    --enable-ld=default \
-    --enable-lto \
-    --enable-plugins \
-    --enable-threads \
-    --target="${TARGET}" \
-    --with-static-standard-libraries
+        "${CONFIGURE_HOST_ARGS[@]+"${CONFIGURE_HOST_ARGS[@]}"}" \
+        --prefix="${INSTALL_DIR}/bfd-${TARGET}" \
+        --htmldir="${INSTALL_DIR}/deleteme" \
+        --infodir="${INSTALL_DIR}/deleteme" \
+        --mandir="${INSTALL_DIR}/deleteme" \
+        --pdfdir="${INSTALL_DIR}/deleteme" \
+        --with-bugurl=https://github.com/ClangBuiltArduino/issue-tracker/issues \
+        --disable-binutils \
+        --disable-compressed-debug-sections \
+        --disable-dwp \
+        --disable-gas \
+        --disable-gdb \
+        --disable-gdbserver \
+        --disable-gold \
+        --disable-gprof \
+        --disable-multilib \
+        --disable-werror \
+        --enable-deterministic-archives \
+        --enable-ld=default \
+        --enable-lto \
+        --enable-plugins \
+        --enable-threads \
+        --target="${TARGET}" \
+        --with-static-standard-libraries
 
 make configure-host
 make LDFLAGS="${COMMON_LDFLAGS[*]}" tooldir="${INSTALL_DIR}/bfd-${TARGET}" -j"$(ncpus)"
@@ -120,15 +120,15 @@ make install tooldir="${INSTALL_DIR}/bfd-${TARGET}"
 rm -rf "${INSTALL_DIR}/deleteme"
 rm -rf "${INSTALL_DIR}/bfd-${TARGET}/share"
 if [[ $BUILD_LD_SCRIPTS -eq 1 ]]; then
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/bin"
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/bfd-plugins"
+        rm -rf "${INSTALL_DIR}/bfd-${TARGET}/bin"
+        rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/bfd-plugins"
 else
-    rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/ldscripts"
+        rm -rf "${INSTALL_DIR}/bfd-${TARGET}/lib/ldscripts"
 fi
 
 strip_bins "${INSTALL_DIR}/bfd-${TARGET}" "${STRIP_TOOL}"
 
 if [[ $PACK -eq 1 ]]; then
-    mkdir -p "${INSTALL_DIR}/install/"
-    cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
+        mkdir -p "${INSTALL_DIR}/install/"
+        cp -r "${INSTALL_DIR}/bfd-${TARGET}"/* "${INSTALL_DIR}/install/"
 fi

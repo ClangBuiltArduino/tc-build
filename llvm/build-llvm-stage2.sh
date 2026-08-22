@@ -82,11 +82,11 @@ fi
 # object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
 STATIC_LIB_ARGS=()
 if [[ $(uname -s) == "Darwin" ]]; then
-    STATIC_LIB_ARGS=(
-        "-DCMAKE_AR=${INSTALL_DIR}/stage1/bin/llvm-ar"
-        "-DCMAKE_C_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
-        "-DCMAKE_CXX_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
-    )
+	STATIC_LIB_ARGS=(
+		"-DCMAKE_AR=${INSTALL_DIR}/stage1/bin/llvm-ar"
+		"-DCMAKE_C_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+		"-DCMAKE_CXX_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
+	)
 fi
 
 # Build stage2

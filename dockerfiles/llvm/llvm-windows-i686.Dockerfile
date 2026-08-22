@@ -95,9 +95,9 @@ RUN bash build-bfd.sh --target=avr --pack-install
 FROM debian:bookworm AS packing
 ARG NIGHTLY=0
 WORKDIR /
-COPY --from=llvm-cross /install/install ./pkg/llvm/install
-COPY --from=gold-cross /install/install ./pkg/gold/install
-COPY --from=bfd-cross /install/install ./pkg/bfd/install
+COPY --from=llvm-cross /install/install ./pkg/llvm/install/install
+COPY --from=gold-cross /install/install ./pkg/gold/install/install
+COPY --from=bfd-cross /install/install ./pkg/bfd/install/install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/push-build.sh .
