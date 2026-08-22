@@ -3,14 +3,17 @@
 Build scripts for a slim LLVM-based toolchain targeting AVR and ARM (Arduino).
 
 ## Build locally
+
 ```bash
 ./build.sh llvm          # Build complete LLVM toolchain
 ./build.sh llvm --head-source  # Build LLVM from a shallow git checkout of HEAD
 ./build.sh sysroot-avr   # Build AVR sysroot
+./build.sh sysroot-avr --head-source  # avr-libc from git HEAD (nightly)
 ./build.sh --help        # See all options
 ```
 
 ## Project Structure
+
 ```
 tc-build/
 ├── build.sh           # Local build entry point
@@ -36,10 +39,12 @@ tc-build/
 | Runtime Library  | libgcc                        |
 
 ### AVR Linker Support
+
 Due to incomplete AVR linker script support in LLD, the toolchain includes the GNU BFD linker as a workaround. Once LLD fully supports AVR linker scripts, BFD will be removed.
 
 ### Arduino Compatibility
-A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is included mprove compatibility with the Arduino build system by handling specific flag adjustments.
+
+A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is included to improve compatibility with the Arduino build system by handling specific flag adjustments.
 
 ## Distribution and Packaging
 
@@ -47,7 +52,50 @@ A [clang-wrapper](https://github.com/ClangBuiltArduino/clang-wrapper) is include
 2. **Sysroot** - Target libraries (avr-libc/newlib + libgcc)
 3. **BFD Linker** - Optional GNU linker for AVR
 
+### Host coverage
+
+| Host | LLVM + gold | BFD | How |
+| ------ | ------------- | ----- | ----- |
+| `x86_64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | alpine/debian containers on x86 runners |
+| `aarch64-linux-gnu` | musl-static, 2-stage | musl + glibc variants | same containers, native on `ubuntu-24.04-arm` runners |
+| `i686-mingw32` | single-stage mingw-w64 cross | mingw cross | `llvm-windows-i686.Dockerfile` |
+| `x86_64-apple-darwin12` | native, 2-stage | native | `llvm-darwin-build.yml` on `macos-15-intel` runners |
+
+The sysroot is host-independent (AVR target libraries, one `-any` archive).
+Linux archives ship musl/glibc variants side by side; `clang-wrapper` picks
+the right one at runtime. Windows/macOS archives are flat.
+
+### Portability model per host
+
+- **Linux** hosts span many libcs/distros, so the toolchain is fully
+  **statically linked** (musl libc + libc++) and ships musl/glibc variants
+  where relevant.
+- **Windows (mingw-w64)** relies on the stable mingw ABI; binaries are
+  statically linked and self-contained.
+- **macOS** has a stable ABI, so binaries link **dynamically** against the
+  system libSystem/libc++ and one build covers a range of macOS versions via
+  `MACOSX_DEPLOYMENT_TARGET` (mirrors llvm-mingw's `MACOS_REDIST` builds).
+
+### Channels
+
+Packages are published as GitHub releases in two flavors:
+
+- **Stable** — pinned upstream releases from `versions.conf`, tagged like
+  `llvm-<ver>-<date>`.
+- **Nightly** — LLVM and avr-libc built from upstream git HEAD (libgcc stays on
+  a pinned GCC release), tagged with a `nightly-` prefix so the
+  [BoardManagerFiles](https://github.com/ClangBuiltArduino/BoardManagerFiles)
+  updater can pick them out.
+
+### Automation
+
+- `Check for Updates` opens a PR when upstream versions change.
+- The LLVM and sysroot pipelines run on a daily schedule as nightly builds and
+  can also be dispatched manually (`nightly` input toggles the flavor).
+- After a successful publish, the pipelines send a `repository_dispatch` to
+  BoardManagerFiles (requires the org secret `CBA_DISPATCH_TOKEN`) so the
+  package index refreshes itself.
+
 ## License
 
 Apache-2.0 - See [LICENSE](LICENSE)
-
