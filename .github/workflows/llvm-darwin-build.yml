@@ -68,32 +68,33 @@ jobs:
             mv install/install/lib/LLVMgold.so install/install/lib/LLVMgold.dylib
           fi
 
-      # push-build.sh consumes (moves) <dir>/install, so give each artifact its
-      # own staged copy. The LLVM tarball ships the full tree (gold plugin and
-      # avr-ld included); the gold/bfd tools get their own flat subtrees that
-      # match what clang-wrapper expects on non-Linux hosts.
+      # push-build.sh packages <staging>/install/install, so stage each artifact
+      # there (the same convention the linux/windows pipelines use). The LLVM
+      # tarball ships the full tree (gold plugin and avr-ld included); gold/bfd
+      # get their own subtrees matching what clang-wrapper expects off Linux.
       - name: Publish archives
         run: |
           NIGHTLY_FLAG=""
           [ "${NIGHTLY}" = "1" ] && NIGHTLY_FLAG="--nightly"
+          # push <flag> <path...>: stage the given install/install-relative paths
+          # (preserving their dirs) and publish them as one archive. Everything
+          # lives in a single install tree here, so gold/bfd name exact files.
+          push() {
+            local flag="$1"; shift
+            rm -rf "${RUNNER_TEMP}/publish"
+            mkdir -p "${RUNNER_TEMP}/publish/install/install"
+            local p
+            for p in "$@"; do
+              mkdir -p "${RUNNER_TEMP}/publish/install/install/$(dirname "${p}")"
+              cp -R "install/install/${p}" "${RUNNER_TEMP}/publish/install/install/$(dirname "${p}")/"
+            done
+            (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
+              --gz-tar --zstd-tar "${flag}" --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
+          }
 
-          rm -rf "${RUNNER_TEMP}/publish"
-          mkdir -p "${RUNNER_TEMP}/publish"
-          cp -R install "${RUNNER_TEMP}/publish/install"
-          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
-            --gz-tar --zstd-tar --llvm-tc --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
-
-          rm -rf "${RUNNER_TEMP}/publish"
-          mkdir -p "${RUNNER_TEMP}/publish/install/lib"
-          cp install/install/lib/LLVMgold.dylib "${RUNNER_TEMP}/publish/install/lib/"
-          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
-            --gz-tar --zstd-tar --llvm-gold --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
-
-          rm -rf "${RUNNER_TEMP}/publish"
-          mkdir -p "${RUNNER_TEMP}/publish/install/bin"
-          cp install/install/bin/avr-ld "${RUNNER_TEMP}/publish/install/bin/"
-          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
-            --gz-tar --zstd-tar --bfd --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
+          push --llvm-tc .
+          push --llvm-gold lib/LLVMgold.dylib
+          push --bfd bin/avr-ld
 
   dispatch:
     needs: main
