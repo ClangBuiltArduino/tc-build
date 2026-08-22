@@ -82,11 +82,12 @@ fi
 # object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
 STATIC_LIB_ARGS=()
 if [[ $(uname -s) == "Darwin" ]]; then
-	STATIC_LIB_ARGS=(
-		"-DCMAKE_AR=${INSTALL_DIR}/stage1/bin/llvm-ar"
-		"-DCMAKE_C_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
-		"-DCMAKE_CXX_CREATE_STATIC_LIBRARY=${INSTALL_DIR}/stage1/bin/llvm-ar rcs <TARGET> <OBJECTS>"
-	)
+    # LLVM's UseLibtool.cmake overrides the archive rule with CMAKE_LIBTOOL on
+    # Apple; Xcode's libtool predates our object format, but the in-tree
+    # llvm-libtool-darwin understands it and keeps LLVM's own rule intact.
+    STATIC_LIB_ARGS=(
+        "-DCMAKE_LIBTOOL=${INSTALL_DIR}/stage1/bin/llvm-libtool-darwin"
+    )
 fi
 
 # Build stage2
