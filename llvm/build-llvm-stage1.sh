@@ -22,21 +22,34 @@ set -euo pipefail
 prep_env
 
 # Get source mode from args.
-parse_llvm_source_args "$@"
+parse_source_args "$@"
 
 # Get sources
 cd "${SOURCE_DIR}"
 LLVM_SDIR="$(get_llvm_source)"
 
 # Detect if host has musl or glibc for configuring
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+if is_musl; then
     HAS_MUSL_LIBC="ON"
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608") # 8MB stack size
     echo "Building for musl libc"
 else
     HAS_MUSL_LIBC="OFF"
-    echo "Building for glibc"
+    echo "Building for glibc/system libc"
+fi
+
+# Linux needs the LLVM runtimes (static musl libc++) for portability across
+# distros/libcs, and defaults the built clang to compiler-rt/libunwind.
+# macOS ships a stable system libc++, so nothing is built and the clang
+# defaults are left alone -- mirrors how native darwin toolchains are built.
+STAGE1_OS_ARGS=(
+    "-DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi;libunwind"
+    -DCLANG_DEFAULT_RTLIB=compiler-rt
+    -DCLANG_DEFAULT_UNWINDLIB=libunwind
+)
+if [[ $(uname -s) == "Darwin" ]]; then
+    STAGE1_OS_ARGS=("-DLLVM_ENABLE_RUNTIMES=")
 fi
 
 # Build stage1
@@ -44,12 +57,12 @@ init_build_dir "${BUILD_DIR}/stage1"
 cmake -G "Ninja" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/stage1" \
-    -DLLVM_TARGETS_TO_BUILD="X86" \
+    -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
     -DLLVM_CCACHE_BUILD=ON \
     -DLLVM_ENABLE_BINDINGS=OFF \
     -DLLVM_ENABLE_OCAMLDOC=OFF \
     -DLLVM_ENABLE_PROJECTS="clang;lld" \
-    -DLLVM_ENABLE_RUNTIMES="compiler-rt;libcxx;libcxxabi;libunwind" \
+    "${STAGE1_OS_ARGS[@]}" \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_ZLIB=FORCE_ON \
     -DLLVM_ENABLE_ZSTD=FORCE_ON \
@@ -64,8 +77,6 @@ cmake -G "Ninja" \
     -DLLVM_TOOL_LLVM_DRIVER_BUILD=ON \
     -DCLANG_DEFAULT_CXX_STDLIB="libc++" \
     -DCLANG_DEFAULT_OBJCOPY="llvm-objcopy" \
-    -DCLANG_DEFAULT_RTLIB="compiler-rt" \
-    -DCLANG_DEFAULT_UNWINDLIB="libunwind" \
     -DCLANG_ENABLE_ARCMT=OFF \
     -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
     -DCLANG_PLUGIN_SUPPORT=OFF \
@@ -104,18 +115,20 @@ cmake -G "Ninja" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
     -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
-    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
-    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(ncpus)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(ncpus)" \
     "${LLVM_SDIR}/llvm"
 
 ninja
 rm -rf "${INSTALL_DIR}/stage1"
 ninja install
 
-# Create symlinks for libc++ and friends
-cd "$INSTALL_DIR/stage1/lib"
-for library in libc++abi.so.1 libc++.a libc++abi.a libc++.so.1 libunwind.so.1 libunwind.a; do
-    ln -sv "${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/${library}" .
-done
+# Create symlinks for libc++ and friends (Linux per-arch libdir layout)
+if [[ $(uname -s) == "Linux" ]]; then
+    cd "$INSTALL_DIR/stage1/lib"
+    for library in libc++abi.so.1 libc++.a libc++abi.a libc++.so.1 libunwind.so.1 libunwind.a; do
+        ln -sv "${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/${library}" .
+    done
+fi
 
 echo "LLVM stage1 build completed successfully!"

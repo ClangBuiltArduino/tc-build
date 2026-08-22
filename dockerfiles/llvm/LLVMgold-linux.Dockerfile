@@ -54,6 +54,7 @@ RUN rm -rf /source && rm -rf /build
 # If noting is passed, it depends on the deps-{VARIANT}-local stage.
 FROM ${DEPS_IMAGE_GLIBC} AS deps-glibc
 FROM debian:bookworm AS stage1-glibc-local
+ARG NIGHTLY=0
 WORKDIR /
 COPY --from=deps-glibc /install ./install
 RUN ls && ls install
@@ -61,21 +62,22 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
 RUN apt-get update -y
-RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic -y
-RUN bash build-llvm-stage1.sh && ls && ls install
+RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic git -y
+RUN bash build-llvm-stage1.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source) && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 # MUSL build
 FROM ${DEPS_IMAGE_MUSL} AS deps-musl
 FROM alpine:edge AS stage1-musl-local
+ARG NIGHTLY=0
 WORKDIR /
 COPY --from=deps-musl /install ./install
 RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers
-RUN bash build-llvm-stage1.sh && ls && ls install
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers git
+RUN bash build-llvm-stage1.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source) && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 #####################
@@ -87,6 +89,7 @@ RUN rm -rf /source && rm -rf /build
 # If noting is passed, it depends on the stage1-{VARIANT}-local stage.
 FROM ${STAGE1_IMAGE_GLIBC} AS stage1-glibc
 FROM debian:bookworm AS llvmgold-glibc-local
+ARG NIGHTLY=0
 WORKDIR /
 COPY --from=stage1-glibc /install ./install
 RUN ls && ls install
@@ -94,21 +97,22 @@ COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
 RUN apt-get update -y
-RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic -y
-RUN bash build-llvm-gold.sh && ls && ls install
+RUN apt-get install clang llvm lld binutils build-essential ccache cmake ninja-build zstd texinfo libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev wget bash gzip tar xz-utils file libarchive-tools build-essential gettext libtool autoconf automake bison libzstd-dev python3 linux-headers-generic git -y
+RUN bash build-llvm-gold.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source) && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
 # MUSL build
 FROM ${STAGE1_IMAGE_MUSL} AS stage1-musl
 FROM alpine:edge AS llvmgold-musl-local
+ARG NIGHTLY=0
 WORKDIR /
 COPY --from=stage1-musl /install ./install
 RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-gold.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake curl ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers
-RUN bash build-llvm-gold.sh
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake curl ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers git
+RUN bash build-llvm-gold.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
 
 #########################
@@ -121,6 +125,8 @@ RUN rm -rf /source && rm -rf /build
 FROM ${FINAL_IMAGE_GLIBC} AS final-glibc
 FROM ${FINAL_IMAGE_MUSL} AS final-musl
 FROM alpine:edge AS packing
+ARG NIGHTLY=0
+ARG PKG_ARCH=amd64
 WORKDIR /
 COPY --from=final-glibc /install/install ./install/install/glibc
 COPY --from=final-musl /install/install ./install/install/musl
@@ -131,4 +137,4 @@ COPY /common/push-build.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git github-cli file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN bash push-build.sh --gz-tar --zstd-tar --llvm-gold --pkg-arch="amd64" --pkg-os="linux"
+RUN bash push-build.sh --gz-tar --zstd-tar --llvm-gold --pkg-arch="${PKG_ARCH}" --pkg-os="linux" $([ "${NIGHTLY:-0}" = "1" ] && echo --nightly)

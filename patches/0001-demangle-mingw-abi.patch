@@ -1,0 +1,17 @@
+Subject: [PATCH] Demangle: exclude MinGW from dllimport ABI
+
+Backport of llvm/llvm-project#198288 (merged on main). MinGW needs no
+__declspec annotations; with them, static LLVM archives produce undefined
+_imp_ references when linking LLVMgold.dll.
+
+--- a/llvm/include/llvm/Demangle/DemangleConfig.h
++++ b/llvm/include/llvm/Demangle/DemangleConfig.h
+@@ -102,7 +102,7 @@
+ #if defined(LLVM_BUILD_STATIC) || !defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS)
+ #define DEMANGLE_ABI
+ #else
+-#if defined(_WIN32)
++#if defined(_WIN32) && !defined(__MINGW32__)
+ #if defined(LLVM_EXPORTS)
+ #define DEMANGLE_ABI __declspec(dllexport)
+ #else

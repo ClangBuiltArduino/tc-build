@@ -2,30 +2,76 @@ name: AVR bfd Build Pipeline
 
 on:
   workflow_dispatch:
+    inputs:
+      hosts:
+        description: "Which host architectures to build"
+        type: choice
+        options: [all, amd64, aarch64]
+        default: all
 
 jobs:
-  main:
+  resolve:
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        env:
+          HOSTS: ${{ inputs.hosts }}
+        run: |
+          case "${HOSTS:-all}" in
+            amd64)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"}]}' >> "$GITHUB_OUTPUT" ;;
+            aarch64)
+              echo 'matrix={"include":[{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo 'matrix={"include":[{"arch":"amd64","runs":"ubuntu-latest"},{"arch":"aarch64","runs":"ubuntu-24.04-arm"}]}' >> "$GITHUB_OUTPUT" ;;
+          esac
+
+  main:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve.outputs.matrix) }}
+    runs-on: ${{ matrix.runs }}
     permissions:
       contents: write
       packages: write
     steps:
       - uses: actions/checkout@v7
-      
+
       - name: Log in to GitHub Container registry
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Build bfd linker for avr
         uses: docker/build-push-action@v7
         with:
           context: .
           target: packing
-          file: dockerfiles/bfd/avr-linux-amd64.Dockerfile
+          file: dockerfiles/bfd/avr-linux.Dockerfile
           push: false
-          tags: ghcr.io/clangbuiltarduino/avr-bfd-amd64-linux:${{ github.sha }}
+          tags: ghcr.io/clangbuiltarduino/avr-bfd-${{ matrix.arch }}-linux:${{ github.sha }}
+          build-args: |
+            PKG_ARCH=${{ matrix.arch }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
+
+  dispatch:
+    needs: main
+    runs-on: ubuntu-latest
+    env:
+      DISPATCH_TOKEN: ${{ secrets.CBA_DISPATCH_TOKEN }}
+    steps:
+      # BFD is stable-channel only; nightly pins the latest stable BFD.
+      - name: Notify BoardManagerFiles
+        if: env.DISPATCH_TOKEN != ''
+        run: |
+          curl -sSf -X POST \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/ClangBuiltArduino/BoardManagerFiles/dispatches \
+            -d '{"event_type":"tc-build-release","client_payload":{"channel":"stable"}}'

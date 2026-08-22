@@ -20,12 +20,24 @@ set -euo pipefail
 
 COMMON_FLAGS+=("-O2" "-fPIC")
 
-if ! getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=1048576") # 1MB stack size
 fi
 
 # Versions come from utils.sh (via versions.conf)
+
+# Cross builds get the cmake toolchain file so try_compile checks work; native
+# builds keep using the host compiler directly.
+TOOLCHAIN_ARGS=()
+ZSTD_CROSS_ARGS=()
+if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+    TOOLCHAIN_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+    # zstd's contrib/gen_html is a build-time host tool; cross-compiling it
+    # produces a target binary that cmake then tries to run. We only need
+    # libzstd.a, so skip contrib/programs entirely in cross mode.
+    ZSTD_CROSS_ARGS+=(-DZSTD_BUILD_CONTRIB=OFF -DZSTD_BUILD_PROGRAMS=OFF)
+fi
 
 # Prepare environment
 prep_env
@@ -41,12 +53,13 @@ ZSTD_SDIR="${SOURCE_DIR}/zstd-${ZSTD_VERSION}"
 # Build zlib
 init_build_dir "${BUILD_DIR}/zlib"
 cmake -G Ninja \
+    "${TOOLCHAIN_ARGS[@]+"${TOOLCHAIN_ARGS[@]}"}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zlib" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_LINKER=lld \
+    -DCMAKE_C_COMPILER="${CC:-clang}" \
+    -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
+    -DCMAKE_LINKER="${LD:-lld}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
@@ -54,19 +67,20 @@ cmake -G Ninja \
     -DWITH_GTEST=OFF \
     "${ZLIB_SDIR}"
 
-ninja -j"$(nproc --all)"
+ninja -j"$(ncpus)"
 rm -rf "${INSTALL_DIR}/zlib"
 ninja install
 
 # Build zstd
 init_build_dir "${BUILD_DIR}/zstd"
 cmake -G Ninja \
+    "${TOOLCHAIN_ARGS[@]+"${TOOLCHAIN_ARGS[@]}"}" \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/zstd" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_LINKER=lld \
+    -DCMAKE_C_COMPILER="${CC:-clang}" \
+    -DCMAKE_CXX_COMPILER="${CXX:-clang++}" \
+    -DCMAKE_LINKER="${LD:-lld}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}" \
     -DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
@@ -75,8 +89,9 @@ cmake -G Ninja \
     -DZSTD_BUILD_SHARED=OFF \
     -DZSTD_BUILD_STATIC=ON \
     -DZSTD_MULTITHREAD_SUPPORT=ON \
+    "${ZSTD_CROSS_ARGS[@]+"${ZSTD_CROSS_ARGS[@]}"}" \
     "${ZSTD_SDIR}/build/cmake"
 
-ninja -j"$(nproc --all)"
+ninja -j"$(ncpus)"
 rm -rf "${INSTALL_DIR}/zstd"
 ninja install

@@ -49,6 +49,7 @@ RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --p
 #############
 
 FROM alpine:edge AS packing
+ARG PKG_ARCH=amd64
 WORKDIR /
 COPY --from=glibc-build /install/install ./install/install/glibc
 COPY --from=musl-build /install/install ./install/install/musl
@@ -59,4 +60,4 @@ COPY /common/push-build.sh .
 RUN apk add bash zstd coreutils gzip tar xz patchelf git github-cli file
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN bash push-build.sh --gz-tar --zstd-tar --bfd --pkg-arch="amd64" --pkg-os="linux"
+RUN bash push-build.sh --gz-tar --zstd-tar --bfd --pkg-arch="${PKG_ARCH}" --pkg-os="linux"

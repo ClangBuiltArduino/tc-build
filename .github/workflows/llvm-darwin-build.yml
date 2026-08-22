@@ -1,0 +1,111 @@
+name: LLVM Darwin Build Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      nightly:
+        description: "Build from upstream git HEAD and publish as nightly packages"
+        type: boolean
+        default: false
+  # Scheduled runs are always nightly builds (offset from the other pipelines).
+  schedule:
+    - cron: "30 2 * * *"
+
+# Serialize runs: pipelines publish releases.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ inputs.nightly }}
+  cancel-in-progress: false
+
+env:
+  NIGHTLY: ${{ (github.event_name == 'schedule' || inputs.nightly) && '1' || '0' }}
+
+jobs:
+  main:
+    # x86_64 macOS host (the Arduino host id for it is x86_64-apple-darwin12).
+    runs-on: macos-15-intel
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build dependencies
+        run: |
+          # Homebrew ships lld as its own formula (the llvm bottle no longer
+          # contains it); both are needed by the build scripts.
+          for tool in ccache zstd llvm lld go; do
+            brew list "$tool" >/dev/null 2>&1 || brew install "$tool"
+          done
+          command -v lld || sudo ln -sf "$(brew --prefix llvm)/bin/lld" /usr/local/bin/lld
+          # Plain 'lld' prints usage and exits non-zero; check via the driver.
+          ld.lld --version
+
+      # Native two-stage build reusing the local build scripts.
+      - name: Build LLVM toolchain
+        run: |
+          HEAD_FLAG=""
+          [ "${NIGHTLY}" = "1" ] && HEAD_FLAG="--head-source"
+          ./build.sh llvm ${HEAD_FLAG}
+
+      - name: Dump cmake diagnostics on failure
+        if: failure()
+        run: |
+          find build -maxdepth 3 \( -name CMakeError.log -o -name CMakeConfigureLog.yaml \) -print |
+          while read -r f; do
+            echo "=== $f ==="
+            tail -200 "$f"
+          done
+
+      - name: Build BFD linker
+        run: ./build.sh bfd --target=avr --pack-install
+
+      # CMake MODULE libraries get a .so suffix on Darwin, but clang looks for
+      # LLVMgold.dylib next to the driver.
+      - name: Fix gold plugin suffix
+        run: |
+          if [ -f install/install/lib/LLVMgold.so ]; then
+            mv install/install/lib/LLVMgold.so install/install/lib/LLVMgold.dylib
+          fi
+
+      # push-build.sh consumes (moves) <dir>/install, so give each artifact its
+      # own staged copy. The LLVM tarball ships the full tree (gold plugin and
+      # avr-ld included); the gold/bfd tools get their own flat subtrees that
+      # match what clang-wrapper expects on non-Linux hosts.
+      - name: Publish archives
+        run: |
+          NIGHTLY_FLAG=""
+          [ "${NIGHTLY}" = "1" ] && NIGHTLY_FLAG="--nightly"
+
+          rm -rf "${RUNNER_TEMP}/publish"
+          mkdir -p "${RUNNER_TEMP}/publish"
+          cp -R install "${RUNNER_TEMP}/publish/install"
+          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
+            --gz-tar --zstd-tar --llvm-tc --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
+
+          rm -rf "${RUNNER_TEMP}/publish"
+          mkdir -p "${RUNNER_TEMP}/publish/install/lib"
+          cp install/install/lib/LLVMgold.dylib "${RUNNER_TEMP}/publish/install/lib/"
+          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
+            --gz-tar --zstd-tar --llvm-gold --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
+
+          rm -rf "${RUNNER_TEMP}/publish"
+          mkdir -p "${RUNNER_TEMP}/publish/install/bin"
+          cp install/install/bin/avr-ld "${RUNNER_TEMP}/publish/install/bin/"
+          (cd "${RUNNER_TEMP}/publish" && bash "${GITHUB_WORKSPACE}/common/push-build.sh" \
+            --gz-tar --zstd-tar --bfd --pkg-arch="x86_64" --pkg-os="darwin" ${NIGHTLY_FLAG})
+
+  dispatch:
+    needs: main
+    runs-on: ubuntu-latest
+    env:
+      DISPATCH_TOKEN: ${{ secrets.CBA_DISPATCH_TOKEN }}
+    steps:
+      - name: Notify BoardManagerFiles
+        if: env.DISPATCH_TOKEN != ''
+        run: |
+          curl -sSf -X POST \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/ClangBuiltArduino/BoardManagerFiles/dispatches \
+            -d '{"event_type":"tc-build-release","client_payload":{"channel":"${{ env.NIGHTLY == '1' && 'nightly' || 'stable' }}"}}'

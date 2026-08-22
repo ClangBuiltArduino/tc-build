@@ -14,6 +14,7 @@
 # limitations under the License.
 
 FROM alpine:edge AS deps-local
+ARG NIGHTLY=0
 WORKDIR /
 COPY /versions.conf .
 COPY /common/utils.sh .
@@ -23,7 +24,7 @@ COPY /sysroot/build-avr-sysroot.sh .
 RUN apk add bash coreutils gzip tar xz patchelf git go github-cli make file gcc-avr libarchive-tools build-base gettext libtool autoconf automake bison texinfo zlib-dev zstd-dev python3 zip
 RUN --mount=type=secret,id=GH_TOKEN \
     gh auth login --with-token < /run/secrets/GH_TOKEN
-RUN chmod +x build-avr-sysroot.sh && bash build-avr-sysroot.sh
+RUN chmod +x build-avr-sysroot.sh && bash build-avr-sysroot.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN mv ./install/avr-sysroot ./install/install
 RUN chmod +x build-bfd.sh && bash build-bfd.sh --target=avr --linker-scripts --pack-install
-RUN bash push-build.sh --gz-tar --zstd-tar --zip --sysroot=avr
+RUN bash push-build.sh --gz-tar --zstd-tar --zip --sysroot=avr $([ "${NIGHTLY:-0}" = "1" ] && echo --nightly)

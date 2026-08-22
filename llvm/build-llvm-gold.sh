@@ -18,24 +18,37 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 source "${SCRIPT_DIR}"/../common/utils.sh &>/dev/null || source utils.sh # Include basic common utilities
 set -euo pipefail
 
-# Set path for using libs from stage 1
-COMMON_LDFLAGS+=(
-    "-L${INSTALL_DIR}/stage1/lib"
-    "-L${INSTALL_DIR}/stage1/lib/x86_64-unknown-linux-gnu/"
-)
+# Cross builds (CROSS_TOOLCHAIN_FILE set) use the distro cross compiler in a
+# single stage; native builds use the stage1 bootstrap compiler.
+if [[ -n ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+    COMPILER_ARGS=(-DCMAKE_TOOLCHAIN_FILE="${CROSS_TOOLCHAIN_FILE}")
+    CROSS_BUILD=1
+else
+    COMPILER_ARGS=(-DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang"
+        -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++")
+    CROSS_BUILD=0
+    # Set path for using libs from stage 1
+    COMMON_LDFLAGS+=(
+        "-L${INSTALL_DIR}/stage1/lib"
+        "-L${INSTALL_DIR}/stage1/lib/$(uname -m)-unknown-linux-gnu/"
+    )
+fi
 
-# Set flags for using LLVM stdlibs.
-COMMON_LDFLAGS+=(
-    "-Wl,--as-needed"
-    "-Wl,-Bstatic"
-    "-stdlib=libc++"
-    "--unwindlib=libunwind"
-    "-lc++"
-    "-lc++abi"
-)
+# Static-libc++ link dance is a native Linux/glibc-musl concern only; cross
+# containers are Linux too but link against the target runtime.
+if [[ $(uname -s) == "Linux" && ${CROSS_BUILD:-0} -eq 0 ]]; then
+    COMMON_LDFLAGS+=(
+        "-Wl,--as-needed"
+        "-Wl,-Bstatic"
+        "-stdlib=libc++"
+        "--unwindlib=libunwind"
+        "-lc++"
+        "-lc++abi"
+    )
+fi
 
 # Detect if host has musl or glibc for configuring
-if ldd --version 2>&1 | grep -qi musl; then
+if is_musl; then
     # https://wiki.musl-libc.org/functional-differences-from-glibc.html#Thread-stack-size
     COMMON_LDFLAGS+=("-Wl,-z,stack-size=8388608")
 fi
@@ -44,19 +57,36 @@ fi
 prep_env
 
 # Get source mode from args.
-parse_llvm_source_args "$@"
+parse_source_args "$@"
 
 # Get sources
 cd "${SOURCE_DIR}"
 LLVM_SDIR="$(get_llvm_source)"
+cd "${LLVM_SDIR}"
+apply_llvm_patches
+cd -
 get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
 BINUTILS_SDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}"
 
-# Use tools exclusively from bootstrap build if possible.
-export PATH="$INSTALL_DIR/stage1/bin:$PATH"
-export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/x86_64-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+if [[ ${CROSS_BUILD} -eq 0 ]]; then
+    # Use tools exclusively from bootstrap build if possible.
+    export PATH="$INSTALL_DIR/stage1/bin:$PATH"
+    export LD_LIBRARY_PATH="$INSTALL_DIR/stage1/lib/$(uname -m)-unknown-linux-gnu:$INSTALL_DIR/stage1/lib"
+fi
 
-# Build stage2
+# macOS's libtool (from Xcode) predates our stage1 clang and can't parse its
+# object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
+STATIC_LIB_ARGS=()
+if [[ $(uname -s) == "Darwin" ]]; then
+    # LLVM's UseLibtool.cmake overrides the archive rule with CMAKE_LIBTOOL on
+    # Apple; Xcode's libtool predates our object format, but the in-tree
+    # llvm-libtool-darwin understands it and keeps LLVM's own rule intact.
+    STATIC_LIB_ARGS=(
+        "-DCMAKE_LIBTOOL=${INSTALL_DIR}/stage1/bin/llvm-libtool-darwin"
+    )
+fi
+
+# Build gold plugin
 init_build_dir "${BUILD_DIR}/llvmgold"
 cmake -G "Ninja" \
     -DCMAKE_BUILD_TYPE=Release \
@@ -65,18 +95,20 @@ cmake -G "Ninja" \
     -DLLVM_DISTRIBUTION_COMPONENTS="LLVMgold" \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/install" \
     -DLLVM_BINUTILS_INCDIR="${BINUTILS_SDIR}/include" \
+    $([[ ${CROSS_BUILD} -eq 1 ]] && echo "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--export=onload") \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
     -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_BUILD_UTILS=OFF \
     -DLLVM_CCACHE_BUILD=ON \
     -DLLVM_ENABLE_BACKTRACES=OFF \
     -DLLVM_ENABLE_BINDINGS=OFF \
-    -DLLVM_ENABLE_LIBCXX=ON \
+    -DLLVM_ENABLE_LIBCXX="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo ON)" \
     -DLLVM_ENABLE_LIBXML2=OFF \
     -DLLVM_ENABLE_LLD=ON \
-    -DLLVM_ENABLE_LTO=THIN \
+    -DLLVM_ENABLE_LTO="$([[ ${CROSS_BUILD} -eq 1 ]] && echo OFF || echo THIN)" \
     -DLLVM_ENABLE_OCAMLDOC=OFF \
     -DLLVM_ENABLE_PIC=ON \
+    -DLLVM_ENABLE_PLUGINS=ON \
     -DLLVM_ENABLE_ZLIB=ON \
     -DLLVM_ENABLE_ZSTD=ON \
     -DLLVM_INCLUDE_BENCHMARKS=OFF \
@@ -85,7 +117,7 @@ cmake -G "Ninja" \
     -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_INCLUDE_UTILS=OFF \
     -DLLVM_LINK_LLVM_DYLIB=OFF \
-    -DLLVM_STATIC_LINK_CXX_STDLIB=ON \
+    -DLLVM_STATIC_LINK_CXX_STDLIB="$([[ $(uname -s) == Darwin ]] && echo OFF || echo ON)" \
     -DLLVM_TOOL_BUGPOINT_BUILD=OFF \
     -DLLVM_TOOL_BUGPOINT_PASSES_BUILD=OFF \
     -DLLVM_TOOL_DSYMUTIL_BUILD=OFF \
@@ -173,15 +205,15 @@ cmake -G "Ninja" \
     -DZLIB_LIBRARY="${INSTALL_DIR}/zlib/lib/libz.a" \
     -Dzstd_INCLUDE_DIR="${INSTALL_DIR}/zstd/include" \
     -Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
-    -DCMAKE_C_COMPILER="${INSTALL_DIR}/stage1/bin/clang" \
-    -DCMAKE_CXX_COMPILER="${INSTALL_DIR}/stage1/bin/clang++" \
+    "${COMPILER_ARGS[@]}" \
+    "${STATIC_LIB_ARGS[@]}" \
     -DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
-    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]} -stdlib=libc++" \
-    -DCMAKE_EXE_LINKER_FLAGS="-static ${COMMON_LDFLAGS[*]}" \
-    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
-    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]} -Wl,-Bdynamic" \
-    -DLLVM_PARALLEL_COMPILE_JOBS="$(nproc --all)" \
-    -DLLVM_PARALLEL_LINK_JOBS="$(nproc --all)" \
+    -DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ $(uname -s) == Linux && ${CROSS_BUILD:-0} -eq 0 ]] && echo " -stdlib=libc++")" \
+    -DCMAKE_EXE_LINKER_FLAGS="$([[ $(uname -s) == Linux ]] && echo -static) ${COMMON_LDFLAGS[*]}" \
+    -DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
+    -DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}$([[ $(uname -s) == Linux ]] && echo " -Wl,-Bdynamic")" \
+    -DLLVM_PARALLEL_COMPILE_JOBS="$(ncpus)" \
+    -DLLVM_PARALLEL_LINK_JOBS="$(ncpus)" \
     "${LLVM_SDIR}/llvm"
 
 ninja distribution

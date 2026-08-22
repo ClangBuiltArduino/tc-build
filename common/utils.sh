@@ -47,8 +47,31 @@ INSTALL_DIR="${CURR_DIR}/install"
 export COMMON_FLAGS=("-ffunction-sections"
     "-fdata-sections"
     "-pipe")
-export COMMON_LDFLAGS=("-Wl,--gc-sections"
-    "-Wl,--strip-debug")
+if [[ $(uname -s) == "Darwin" ]]; then
+    export COMMON_LDFLAGS=("-Wl,-dead_strip")
+    # macOS exposes a stable ABI, so instead of static linking we ship
+    # dynamically-linked binaries and target a range of macOS versions via
+    # the deployment target (mirrors llvm-mingw's MACOS_REDIST builds and
+    # Homebrew). cmake picks this up as the CMAKE_OSX_DEPLOYMENT_TARGET
+    # default; clang/gcc honor it as -mmacosx-version-min.
+    export MACOSX_DEPLOYMENT_TARGET="10.15"
+else
+    export COMMON_LDFLAGS=("-Wl,--gc-sections"
+        "-Wl,--strip-debug")
+fi
+
+# Portable CPU count (GNU nproc is Linux-only).
+ncpus() {
+    nproc --all 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 2
+}
+
+# True when the current libc is musl (never true on macOS/Windows crosses).
+# The loader-path check is definitive; 'ldd --version' output varies across
+# busybox/musl versions and architectures.
+is_musl() {
+    [[ -e "/lib/ld-musl-$(uname -m).so.1" ]] && return 0
+    ldd --version 2>&1 | grep -qi musl
+}
 
 # Helpful utility functions
 prep_env() {
@@ -71,7 +94,11 @@ get_tar() {
             echo "Using existing file: $2" >&2
         else
             echo "Downloading from $1 as $2 ..." >&2
-            wget -O"$2" "$1"
+            if command -v wget >/dev/null 2>&1; then
+                wget -O"$2" "$1"
+            else
+                curl -fL --retry 3 -o "$2" "$1"
+            fi
         fi
         echo "Extracting $2 into $extract_dir ..." >&2
         mkdir "$extract_dir"
@@ -80,16 +107,19 @@ get_tar() {
     fi
 }
 
-parse_llvm_source_args() {
-    LLVM_SOURCE_MODE="release"
+parse_source_args() {
+    SOURCE_MODE="release"
 
     for arg in "$@"; do
         case "$arg" in
-            --head-source)
-                LLVM_SOURCE_MODE="head"
-                ;;
+        --head-source)
+            SOURCE_MODE="head"
+            ;;
         esac
     done
+
+    # Compatibility alias for LLVM-only callers
+    LLVM_SOURCE_MODE="${SOURCE_MODE}"
 }
 
 get_llvm_source() {
@@ -120,6 +150,27 @@ get_llvm_source() {
     printf '%s\n' "${llvm_sdir}"
 }
 
+get_avr_libc_source() {
+    local libc_sdir="${SOURCE_DIR}/avr-libc-${AVR_LIBC_VER}"
+
+    if [[ ${SOURCE_MODE:-release} == "head" ]]; then
+        if [[ -d "${libc_sdir}/.git" ]]; then
+            echo "Updating existing avr-libc HEAD checkout..." >&2
+            git -C "${libc_sdir}" fetch --depth 1 origin main >&2
+            git -C "${libc_sdir}" reset --hard FETCH_HEAD >&2
+            git -C "${libc_sdir}" clean -fdx >&2
+        else
+            rm -rf "${libc_sdir}" >&2
+            echo "Cloning avr-libc HEAD checkout..." >&2
+            git clone --depth 1 --single-branch --branch main https://github.com/avrdudes/avr-libc.git "${libc_sdir}" >&2
+        fi
+    else
+        get_tar "${AVR_LIBC_URL}" "avr-libc-${AVR_LIBC_VER}.tar.bz2" >&2
+    fi
+
+    printf '%s\n' "${libc_sdir}"
+}
+
 init_build_dir() {
     rm -rf "$1" && mkdir "$1" && cd "$1"
 }
@@ -138,11 +189,30 @@ get_patch() {
 }
 
 apply_llvm_patches() {
-    if [[ -z ${LLVM_PATCHES+x} ]]; then
-        return
+    if [[ -n ${LLVM_PATCHES+x} ]]; then
+        for patch in "${LLVM_PATCHES[@]}"; do
+            get_patch "$patch"
+        done
     fi
 
-    for patch in "${LLVM_PATCHES[@]}"; do
-        get_patch "$patch"
+    # Local patches shipped in tc-build/patches (backports for release builds).
+    # Skipped when already applied (e.g. nightly builds from a newer HEAD).
+    local patch_dir="${SCRIPT_DIR}/../patches"
+    [[ -d ${patch_dir} ]] || return 0
+    local patch
+    for patch in "${patch_dir}"/*.patch; do
+        [[ -e ${patch} ]] || continue
+        if patch -Np1 --dry-run -i "${patch}" >/dev/null 2>&1; then
+            echo "Applying local patch: $(basename "${patch}")"
+            patch -Np1 -i "${patch}"
+        elif patch -Rp1 --dry-run -i "${patch}" >/dev/null 2>&1; then
+            echo "Local patch already applied: $(basename "${patch}")"
+        elif [[ ${SOURCE_MODE:-release} == "head" ]]; then
+            # Backports are usually superseded upstream; context drifts on HEAD.
+            echo "WARNING: local patch does not apply to HEAD (likely superseded upstream): $(basename "${patch}")"
+        else
+            echo "ERROR: local patch does not apply: ${patch}" >&2
+            return 1
+        fi
     done
 }

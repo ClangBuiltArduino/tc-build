@@ -1,16 +1,15 @@
-name: AVR sysroot Build Pipeline
+name: LLVM Windows Build Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       nightly:
-        description: 'Build avr-libc from git HEAD and publish as nightly packages'
+        description: "Build from upstream git HEAD and publish as nightly packages"
         type: boolean
         default: false
-  # Scheduled runs are always nightly builds. Offset from the LLVM pipeline
-  # (00:00 UTC) so both don't hammer GHCR with pushes at the same moment.
+  # Scheduled runs are always nightly builds (offset from the Linux pipeline).
   schedule:
-    - cron: '30 1 * * *'
+    - cron: "15 0 * * *"
 
 # Serialize runs: pipelines publish releases and GHCR images.
 concurrency:
@@ -29,17 +28,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Build avr sysroot
-        uses: ./.github/actions/sysroot-builder
+      - name: Log in to GitHub Container registry
+        uses: docker/login-action@v4
         with:
-          target: avr
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Single-stage mingw cross build: LLVM toolchain, LLVMgold.dll and the
+      # BFD linker for an i686-w64-mingw32 host, all pushed by the packing
+      # stage.
+      - name: Build toolchain for i686-w64-mingw32
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: packing
+          file: dockerfiles/llvm/llvm-windows-i686.Dockerfile
           push: false
-          sha: ${{ github.sha }}
+          tags: ghcr.io/clangbuiltarduino/llvm-i686-windows:${{ github.sha }}
           build-args: |
             NIGHTLY=${{ env.NIGHTLY }}
           secrets: |
             "GH_TOKEN=${{ secrets.GITHUB_TOKEN }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
 
   dispatch:
     needs: main
@@ -47,7 +57,6 @@ jobs:
     env:
       DISPATCH_TOKEN: ${{ secrets.CBA_DISPATCH_TOKEN }}
     steps:
-      # Skipped automatically when the org secret is not configured.
       - name: Notify BoardManagerFiles
         if: env.DISPATCH_TOKEN != ''
         run: |

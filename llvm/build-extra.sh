@@ -21,6 +21,8 @@ set -euo pipefail
 # Set vars
 WORK_DIR="${INSTALL_DIR}/install"
 LLVM_BIN_DIR="${INSTALL_DIR}/stage1/bin"
+# Single-stage cross/native builds have no stage1; use the shipped tools.
+[[ -d "${LLVM_BIN_DIR}" ]] || LLVM_BIN_DIR="${WORK_DIR}/bin"
 echo "Working dir: ${WORK_DIR}"
 
 # Prep env
@@ -40,10 +42,13 @@ cd "${CURR_DIR}"
 strip_bins "${WORK_DIR}" "${LLVM_BIN_DIR}/llvm-strip"
 
 # Set executable rpaths so setting LD_LIBRARY_PATH isn't necessary
-echo "Setting library load paths for portability..."
-for bin in $(find "${WORK_DIR}" -mindepth 2 -maxdepth 3 -type f -exec file {} \; | grep 'ELF .* interpreter' | awk '{print $1}'); do
-    # Remove last character from file output (':')
-    bin="${bin::-1}"
-    echo "${bin}"
-    patchelf --set-rpath '$ORIGIN/../lib' "${bin}"
-done
+# (ELF-only concern; PE/Mach-O binaries are self-contained here).
+if [[ $(uname -s) == "Linux" ]]; then
+    echo "Setting library load paths for portability..."
+    for bin in $(find "${WORK_DIR}" -mindepth 2 -maxdepth 3 -type f -exec file {} \; | grep 'ELF .* interpreter' | awk '{print $1}'); do
+        # Remove last character from file output (':')
+        bin="${bin::-1}"
+        echo "${bin}"
+        patchelf --set-rpath '$ORIGIN/../lib' "${bin}"
+    done
+fi
