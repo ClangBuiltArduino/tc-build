@@ -110,14 +110,16 @@ fi
 cd "${INSTALL_DIR}"
 mv "install" "${DIR_NAME}"
 
+# Pipe through the compressor instead of `tar -I "cmd args"`: BSD tar (macOS)
+# does not word-split a multi-word -I argument, the pipe works everywhere.
 # Create zstd archive
 if [[ $PKG_USE_ZSTD -eq 1 ]]; then
-    tar -I "zstd -T$(ncpus) -19" -cf "${FILE_NAME}.tar.zst" "${DIR_NAME}"
+    tar -cf - "${DIR_NAME}" | zstd -T"$(ncpus)" -19 -o "${FILE_NAME}.tar.zst"
 fi
 
 # Create gzip archive
 if [[ $PKG_USE_GZ -eq 1 ]]; then
-    tar -I "gzip --best" -cf "${FILE_NAME}.tar.gz" "${DIR_NAME}"
+    tar -cf - "${DIR_NAME}" | gzip --best >"${FILE_NAME}.tar.gz"
 fi
 
 # Create zip archive
