@@ -41,15 +41,17 @@ fi
 
 # Linux needs the LLVM runtimes (static musl libc++) for portability across
 # distros/libcs, and defaults the built clang to compiler-rt/libunwind.
-# macOS ships a stable system libc++, so nothing is built and the clang
-# defaults are left alone -- mirrors how native darwin toolchains are built.
+# macOS ships a stable system libc++, so only the compiler-rt builtins are
+# built: like Apple/brew toolchains, stage1's clang auto-links them into
+# every native link, which stage2 needs (LLVM code such as clang's lexer
+# references compiler-rt symbols like __cpu_model).
 STAGE1_OS_ARGS=(
     "-DLLVM_ENABLE_RUNTIMES=compiler-rt;libcxx;libcxxabi;libunwind"
     -DCLANG_DEFAULT_RTLIB=compiler-rt
     -DCLANG_DEFAULT_UNWINDLIB=libunwind
 )
 if [[ $(uname -s) == "Darwin" ]]; then
-    STAGE1_OS_ARGS=("-DLLVM_ENABLE_RUNTIMES=")
+    STAGE1_OS_ARGS=("-DLLVM_ENABLE_RUNTIMES=compiler-rt")
 fi
 
 # Build stage1
