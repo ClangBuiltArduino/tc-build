@@ -17,15 +17,21 @@ ARG DEPS_IMAGE=deps-local
 ARG STAGE1_IMAGE=stage1-local
 ARG STAGE2_IMAGE=stage2-local
 
+######################
+# Shared package set #
+######################
+FROM alpine:edge AS alpine-base
+RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip bash
+
 ##############
 # Deps build #
 ##############
-FROM alpine:edge AS deps-local
+FROM alpine-base AS deps-local
 WORKDIR /
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip zstd zlib bash
+RUN apk add zstd zlib
 RUN bash build-deps.sh && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
@@ -37,7 +43,7 @@ RUN rm -rf /source && rm -rf /build
 # stage1 uses it as the base image to copy things from.
 # If noting is passed, it depends on the deps-local stage.
 FROM ${DEPS_IMAGE} AS deps
-FROM alpine:edge AS stage1-local
+FROM alpine-base AS stage1-local
 ARG NIGHTLY=0
 WORKDIR /
 COPY --from=deps /install ./install
@@ -45,7 +51,7 @@ RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage1.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ xz gzip libarchive-tools ccache bash python3 perl python3-dev linux-headers git
+RUN apk add ccache python3 perl python3-dev linux-headers git
 RUN bash build-llvm-stage1.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source) && ls && ls install
 RUN rm -rf /source && rm -rf /build
 
@@ -57,7 +63,7 @@ RUN rm -rf /source && rm -rf /build
 # stage2 uses it as the base image to copy things from.
 # If noting is passed, it depends on the stage1-local stage.
 FROM ${STAGE1_IMAGE} AS stage1
-FROM alpine:edge AS stage2-local
+FROM alpine-base AS stage2-local
 ARG NIGHTLY=0
 WORKDIR /
 COPY --from=stage1 /install ./install
@@ -65,7 +71,7 @@ RUN ls && ls install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
-RUN apk add clang llvm lld build-base musl-dev coreutils binutils make curl cmake ninja libc-dev gcc g++ file libstdc++-dev libstdc++ libarchive-tools xz gzip ccache bash python3 perl python3-dev linux-headers git
+RUN apk add curl ccache python3 perl python3-dev linux-headers git
 RUN bash build-llvm-stage2.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
 

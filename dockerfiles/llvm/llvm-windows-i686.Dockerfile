@@ -19,17 +19,22 @@
 
 ARG NIGHTLY=0
 
+######################
+# Shared package set #
+######################
+FROM debian:bookworm AS base
+RUN apt-get update -y
+RUN apt-get install cmake ninja-build zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 -y
+
 ##############
 # Deps build #
 ##############
-FROM debian:bookworm AS deps-cross
+FROM base AS deps-cross
 WORKDIR /
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /common/build-deps.sh .
 COPY /common/cross-mingw-i686.cmake /
-RUN apt-get update -y
-RUN apt-get install cmake ninja-build zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 -y
 ENV CC=i686-w64-mingw32-gcc-posix
 ENV CXX=i686-w64-mingw32-g++-posix
 ENV LD=i686-w64-mingw32-ld
@@ -39,7 +44,7 @@ RUN bash build-deps.sh
 ###############
 # LLVM cross  #
 ###############
-FROM debian:bookworm AS llvm-cross
+FROM base AS llvm-cross
 ARG NIGHTLY=0
 WORKDIR /
 COPY --from=deps-cross /install ./install
@@ -48,44 +53,25 @@ COPY /common/utils.sh .
 COPY /llvm/build-llvm-stage2.sh .
 COPY /common/cross-mingw-i686.cmake .
 COPY /patches /patches
-RUN apt-get update -y
-RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
-# Reuse stage2's cmake flow in single-stage cross mode. The toolchain file
-# names the mingw compilers; no CC/CXX env here -- LLVM's NATIVE tablegen
-# subbuild must pick up the host compiler, not the cross one.
+RUN apt-get install ccache git -y
+# Reuse stage2's cmake flow in single-stage cross mode; it also folds the
+# LLVMgold plugin in, saving the old second full LLVM build. The toolchain
+# file names the mingw compilers; no CC/CXX env here -- LLVM's NATIVE
+# tablegen subbuild must pick up the host compiler, not the cross one.
 ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake
 RUN bash build-llvm-stage2.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
-RUN rm -rf /source && rm -rf /build
-
-###############
-# Gold cross  #
-###############
-FROM debian:bookworm AS gold-cross
-ARG NIGHTLY=0
-WORKDIR /
-COPY --from=deps-cross /install ./install
-COPY /versions.conf .
-COPY /common/utils.sh .
-COPY /llvm/build-llvm-gold.sh .
-COPY /common/cross-mingw-i686.cmake .
-COPY /patches /patches
-RUN apt-get update -y
-RUN apt-get install cmake ninja-build ccache zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 python3 git -y
-ENV CROSS_TOOLCHAIN_FILE=/cross-mingw-i686.cmake
-RUN bash build-llvm-gold.sh $([ "${NIGHTLY:-0}" = "1" ] && echo --head-source)
 RUN rm -rf /source && rm -rf /build
 
 ##############
 # BFD cross  #
 ##############
-FROM debian:bookworm AS bfd-cross
+FROM base AS bfd-cross
 WORKDIR /
 COPY --from=deps-cross /install ./install
 COPY /versions.conf .
 COPY /common/utils.sh .
 COPY /binutils/build-bfd.sh .
-RUN apt-get update -y
-RUN apt-get install cmake ninja-build zstd wget bash gzip tar xz-utils file libarchive-tools build-essential gcc-mingw-w64-i686-posix g++-mingw-w64-i686-posix binutils-mingw-w64-i686 texinfo libzstd-dev python3 -y
+RUN apt-get install texinfo libzstd-dev -y
 ENV HOST_TRIPLE=i686-w64-mingw32
 RUN bash build-bfd.sh --target=avr --pack-install
 
@@ -96,7 +82,9 @@ FROM debian:bookworm AS packing
 ARG NIGHTLY=0
 WORKDIR /
 COPY --from=llvm-cross /install/install ./pkg/llvm/install/install
-COPY --from=gold-cross /install/install ./pkg/gold/install/install
+# LLVMgold ships in the llvm tree now (folded into stage2); give it its own
+# staging subtree for the separate gold archive.
+COPY --from=llvm-cross /install/install/lib/LLVMgold.dll ./pkg/gold/install/install/lib/
 COPY --from=bfd-cross /install/install ./pkg/bfd/install/install
 COPY /versions.conf .
 COPY /common/utils.sh .
