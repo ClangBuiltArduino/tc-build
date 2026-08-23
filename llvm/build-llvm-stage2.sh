@@ -90,6 +90,27 @@ if [[ $(uname -s) == "Darwin" ]]; then
     )
 fi
 
+# Off Linux (and in the mingw cross container) LLVMgold is folded into this
+# build, saving a second full LLVM build; Linux keeps the separate gold build
+# because it needs musl and glibc plugin variants.
+DIST_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer"
+GOLD_ARGS=()
+MODULE_LDFLAGS="${COMMON_LDFLAGS[*]}"
+if [[ $(uname -s) != "Linux" || ${CROSS_BUILD} -eq 1 ]]; then
+	cd "${SOURCE_DIR}"
+	get_tar "https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VERSION}.tar.xz" "binutils-${BINUTILS_VERSION}.tar.xz"
+	cd -
+	DIST_COMPONENTS="${DIST_COMPONENTS};LLVMgold"
+	GOLD_ARGS=(
+		-DLLVM_ENABLE_PLUGINS=ON
+		-DLLVM_BINUTILS_INCDIR="${SOURCE_DIR}/binutils-${BINUTILS_VERSION}/include"
+	)
+	# mingw needs the plugin's entry exported.
+	if [[ ${CROSS_BUILD} -eq 1 ]]; then
+		MODULE_LDFLAGS="${MODULE_LDFLAGS} -Wl,--export=onload"
+	fi
+fi
+
 # Build stage2
 init_build_dir "${BUILD_DIR}/stage2"
 cmake -G "Ninja" \
@@ -106,7 +127,7 @@ cmake -G "Ninja" \
 	-DLLVM_BUILD_SHARED_LIBS=OFF \
 	-DLLVM_BUILD_STATIC="$([[ $(uname -s) == Darwin ]] && echo OFF || echo ON)" \
 	-DLLVM_CCACHE_BUILD=ON \
-	-DLLVM_DISTRIBUTION_COMPONENTS="clang-resource-headers;clang;lld;llvm-addr2line;llvm-as;llvm-ar;llvm-nm;llvm-objcopy;llvm-objdump;llvm-ranlib;llvm-readobj;llvm-readelf;llvm-size;llvm-strings;llvm-strip;llvm-symbolizer" \
+	-DLLVM_DISTRIBUTION_COMPONENTS="${DIST_COMPONENTS}" \
 	-DLLVM_BUILD_UTILS=OFF \
 	-DLLVM_ENABLE_BACKTRACES=OFF \
 	-DLLVM_ENABLE_BINDINGS=OFF \
@@ -139,10 +160,11 @@ cmake -G "Ninja" \
 	-Dzstd_LIBRARY="${INSTALL_DIR}/zstd/lib/libzstd.a" \
 	"${COMPILER_ARGS[@]}" \
 	"${STATIC_LIB_ARGS[@]}" \
+	"${GOLD_ARGS[@]}" \
 	-DCMAKE_C_FLAGS="${COMMON_FLAGS[*]}" \
 	-DCMAKE_CXX_FLAGS="${COMMON_FLAGS[*]}$([[ ${CROSS_BUILD} -eq 0 ]] && echo " -stdlib=libc++")" \
 	-DCMAKE_EXE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
-	-DCMAKE_MODULE_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
+	-DCMAKE_MODULE_LINKER_FLAGS="${MODULE_LDFLAGS}" \
 	-DCMAKE_SHARED_LINKER_FLAGS="${COMMON_LDFLAGS[*]}" \
 	-DLLVM_PARALLEL_COMPILE_JOBS="$(ncpus)" \
 	-DLLVM_PARALLEL_LINK_JOBS="$(ncpus)" \

@@ -110,8 +110,12 @@ case "$target" in
         echo ""
         run_script llvm/build-llvm-stage2.sh "$@"
         echo ""
-        run_script llvm/build-llvm-gold.sh "$@"
-        echo ""
+        # Off Linux (and in cross containers) gold is folded into stage2;
+        # native Linux keeps the separate build for its musl/glibc variants.
+        if [[ $(uname -s) == "Linux" && -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
+            run_script llvm/build-llvm-gold.sh "$@"
+            echo ""
+        fi
         run_script llvm/build-extra.sh
         echo -e "\n${GREEN}=== LLVM toolchain build complete ===${NC}"
         echo -e "Output: ${SCRIPT_DIR}/install/install/"
