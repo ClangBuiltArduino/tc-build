@@ -95,7 +95,6 @@ cmake -G "Ninja" \
     -DLLVM_DISTRIBUTION_COMPONENTS="LLVMgold" \
     -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}/install" \
     -DLLVM_BINUTILS_INCDIR="${BINUTILS_SDIR}/include" \
-    $([[ ${CROSS_BUILD} -eq 1 ]] && echo "-DCMAKE_MODULE_LINKER_FLAGS=-Wl,--export=onload") \
     -DLLVM_BUILD_SHARED_LIBS=OFF \
     -DLLVM_BUILD_TOOLS=OFF \
     -DLLVM_BUILD_UTILS=OFF \
