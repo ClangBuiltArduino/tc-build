@@ -85,72 +85,72 @@ target="${1:-}"
 shift || true
 
 case "$target" in
-    deps)
-        check_deps
-        run_script common/build-deps.sh
-        ;;
-    llvm-stage1)
-        check_deps
-        run_script llvm/build-llvm-stage1.sh "$@"
-        ;;
-    llvm-stage2)
-        check_deps
-        run_script llvm/build-llvm-stage2.sh "$@"
-        ;;
-    llvm-gold)
-        check_deps
+deps)
+    check_deps
+    run_script common/build-deps.sh
+    ;;
+llvm-stage1)
+    check_deps
+    run_script llvm/build-llvm-stage1.sh "$@"
+    ;;
+llvm-stage2)
+    check_deps
+    run_script llvm/build-llvm-stage2.sh "$@"
+    ;;
+llvm-gold)
+    check_deps
+    run_script llvm/build-llvm-gold.sh "$@"
+    ;;
+llvm)
+    check_deps
+    echo -e "${CYAN}=== Building complete LLVM toolchain ===${NC}\n"
+    run_script common/build-deps.sh
+    echo ""
+    run_script llvm/build-llvm-stage1.sh "$@"
+    echo ""
+    run_script llvm/build-llvm-stage2.sh "$@"
+    echo ""
+    # Off Linux (and in cross containers) gold is folded into stage2;
+    # native Linux keeps the separate build for its musl/glibc variants.
+    if [[ $(uname -s) == "Linux" && -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
         run_script llvm/build-llvm-gold.sh "$@"
-        ;;
-    llvm)
-        check_deps
-        echo -e "${CYAN}=== Building complete LLVM toolchain ===${NC}\n"
-        run_script common/build-deps.sh
         echo ""
-        run_script llvm/build-llvm-stage1.sh "$@"
-        echo ""
-        run_script llvm/build-llvm-stage2.sh "$@"
-        echo ""
-        # Off Linux (and in cross containers) gold is folded into stage2;
-        # native Linux keeps the separate build for its musl/glibc variants.
-        if [[ $(uname -s) == "Linux" && -z ${CROSS_TOOLCHAIN_FILE:-} ]]; then
-            run_script llvm/build-llvm-gold.sh "$@"
-            echo ""
-        fi
-        run_script llvm/build-extra.sh
-        echo -e "\n${GREEN}=== LLVM toolchain build complete ===${NC}"
-        echo -e "Output: ${SCRIPT_DIR}/install/install/"
-        ;;
-    sysroot-avr)
-        check_deps
-        run_script sysroot/build-avr-sysroot.sh "$@"
-        echo -e "\n${GREEN}=== avr sysroot build complete ===${NC}"
-        echo -e "Output: ${SCRIPT_DIR}/install/install/"
-        ;;
-    sysroot-arm)
-        check_deps
-        run_script sysroot/build-arm-sysroot.sh
-        echo -e "\n${GREEN}=== arm sysroot build complete ===${NC}"
-        echo -e "Output: ${SCRIPT_DIR}/install/install/"
-        ;;
-    bfd)
-        check_deps
-        if [[ -z ${1:-} ]]; then
-            echo -e "${YELLOW}Usage: ./build.sh bfd --target=avr${NC}"
-            exit 1
-        fi
-        run_script binutils/build-bfd.sh "$@"
-        ;;
-    clean)
-        echo -e "${CYAN}Cleaning build artifacts...${NC}"
-        rm -rf build/ source/
-        echo -e "${GREEN}Clean complete.${NC}"
-        ;;
-    --help | -h | "")
-        usage
-        ;;
-    *)
-        echo -e "${RED}Unknown target: $target${NC}\n"
-        usage
+    fi
+    run_script llvm/build-extra.sh
+    echo -e "\n${GREEN}=== LLVM toolchain build complete ===${NC}"
+    echo -e "Output: ${SCRIPT_DIR}/install/install/"
+    ;;
+sysroot-avr)
+    check_deps
+    run_script sysroot/build-avr-sysroot.sh "$@"
+    echo -e "\n${GREEN}=== avr sysroot build complete ===${NC}"
+    echo -e "Output: ${SCRIPT_DIR}/install/install/"
+    ;;
+sysroot-arm)
+    check_deps
+    run_script sysroot/build-arm-sysroot.sh
+    echo -e "\n${GREEN}=== arm sysroot build complete ===${NC}"
+    echo -e "Output: ${SCRIPT_DIR}/install/install/"
+    ;;
+bfd)
+    check_deps
+    if [[ -z ${1:-} ]]; then
+        echo -e "${YELLOW}Usage: ./build.sh bfd --target=avr${NC}"
         exit 1
-        ;;
+    fi
+    run_script binutils/build-bfd.sh "$@"
+    ;;
+clean)
+    echo -e "${CYAN}Cleaning build artifacts...${NC}"
+    rm -rf build/ source/
+    echo -e "${GREEN}Clean complete.${NC}"
+    ;;
+--help | -h | "")
+    usage
+    ;;
+*)
+    echo -e "${RED}Unknown target: $target${NC}\n"
+    usage
+    exit 1
+    ;;
 esac

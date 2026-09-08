@@ -82,12 +82,12 @@ fi
 # object files ("Unknown attribute kind"); use stage1's llvm-ar for archives.
 STATIC_LIB_ARGS=()
 if [[ $(uname -s) == "Darwin" ]]; then
-    # LLVM's UseLibtool.cmake overrides the archive rule with CMAKE_LIBTOOL on
-    # Apple; Xcode's libtool predates our object format, but the in-tree
-    # llvm-libtool-darwin understands it and keeps LLVM's own rule intact.
-    STATIC_LIB_ARGS=(
-        "-DCMAKE_LIBTOOL=${INSTALL_DIR}/stage1/bin/llvm-libtool-darwin"
-    )
+	# LLVM's UseLibtool.cmake overrides the archive rule with CMAKE_LIBTOOL on
+	# Apple; Xcode's libtool predates our object format, but the in-tree
+	# llvm-libtool-darwin understands it and keeps LLVM's own rule intact.
+	STATIC_LIB_ARGS=(
+		"-DCMAKE_LIBTOOL=${INSTALL_DIR}/stage1/bin/llvm-libtool-darwin"
+	)
 fi
 
 # Off Linux (and in the mingw cross container) LLVMgold is folded into this
